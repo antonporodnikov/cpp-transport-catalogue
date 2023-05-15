@@ -61,7 +61,7 @@ public:
     void AddStop(const std::string&& name, const geo::Coordinates&& coords);
 
     void AddBus(const std::string&& name,
-        const std::vector<structs::Stop*>&& stops);
+        const std::vector<std::string>& stops);
     
     void AddDistance(const std::string& stop_from, const std::string& stop_to,
         int distance);

@@ -51,7 +51,7 @@ RequestQueue ParseInput(std::istream& input);
 
 std::pair<std::string, geo::Coordinates> ParseStopRequest(std::string& request);
 
-std::pair<std::string, std::vector<Stop*>> ParseBusRequest(
+std::pair<std::string, std::vector<std::string>> ParseBusRequest(
     TransportCatalogue& catalogue, std::string& request);
 
 void ParseDistanceRequest(TransportCatalogue& catalogue, std::string& request);

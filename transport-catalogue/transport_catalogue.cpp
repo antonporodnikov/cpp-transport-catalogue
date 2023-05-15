@@ -43,16 +43,23 @@ void TransportCatalogue::AddStop(const std::string&& name,
 }
 
 void TransportCatalogue::AddBus(const std::string&& name,
-    const std::vector<structs::Stop*>&& stops)
+    const std::vector<std::string>& stops)
 {
-    buses_.push_back({std::move(name), std::move(stops)});
+    std::vector<structs::Stop*> stops_ptr;
+    stops_ptr.reserve(stops.size());
+    for (const std::string& stop : stops)
+    {
+        stops_ptr.push_back(GetStop(stop));
+    }
+
+    buses_.push_back({std::move(name), stops_ptr});
 
     const auto it = std::next(buses_.end(), -1);
     std::string_view name_strv = it->name;
 
     busname_to_bus_[name_strv] = &(*it);
 
-    for (const structs::Stop* stop_ptr : stops)
+    for (const structs::Stop* stop_ptr : stops_ptr)
     {
         stopname_to_buses_.at(stop_ptr->name).insert(name_strv);
     }

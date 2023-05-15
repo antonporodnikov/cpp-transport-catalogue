@@ -208,20 +208,13 @@ std::pair<std::string, geo::Coordinates> ParseStopRequest(std::string& request)
     return {name, coords};
 }
 
-std::pair<std::string, std::vector<Stop*>> ParseBusRequest(
+std::pair<std::string, std::vector<std::string>> ParseBusRequest(
     TransportCatalogue& catalogue, std::string& request)
 {
     const std::string name = details::GetName(request);
     details::CutName(request);
 
-    const std::vector<std::string> route_str = details::GetRoute(request);
-
-    std::vector<Stop*> route;
-    route.reserve(route_str.size());
-    for (const std::string& stop : route_str)
-    {
-        route.push_back(catalogue.GetStop(stop));
-    }
+    const std::vector<std::string> route = details::GetRoute(request);
 
     request = name + ": " + request;
 
@@ -263,7 +256,7 @@ void ProcessingInput(TransportCatalogue& catalogue, std::istream& input)
     {
         const auto bus_data = parsers::ParseBusRequest(catalogue, request);
 
-        catalogue.AddBus(std::move(bus_data.first), std::move(bus_data.second));
+        catalogue.AddBus(std::move(bus_data.first), bus_data.second);
     }
 
     for (std::string& request : queue.StopsQueue)
