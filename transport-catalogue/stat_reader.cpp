@@ -83,10 +83,7 @@ void PrintValidBusRequest(TransportCatalogue& catalogue,
         << catalogue.ComputeStopsCount(name) << " stops on route, "
         << catalogue.ComputeUniqueStopsCount(name) << " unique stops, ";
 
-    std::cout << std::scientific << std::setprecision(5)
-        << catalogue.ComputeRouteLength(name) << " route length, ";
-    
-    std::cout << std::defaultfloat
+    std::cout << catalogue.ComputeRouteLength(name) << " route length, "
         << catalogue.ComputeCurvature(name) << " curvature";
 
     std::cout << std::endl;

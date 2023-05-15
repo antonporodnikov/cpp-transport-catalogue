@@ -99,7 +99,7 @@ int TransportCatalogue::ComputeUniqueStopsCount(
     return static_cast<int>(unique_stops.size());
 }
 
-int TransportCatalogue::ComputeRouteLength(const std::string& name) const
+double TransportCatalogue::ComputeRouteLength(const std::string& name) const
 {
     int length = 0;
     const structs::Bus* bus_ptr = GetBus(name);
@@ -112,7 +112,7 @@ int TransportCatalogue::ComputeRouteLength(const std::string& name) const
         length += GetDistance((*stop_from)->name, (*stop_to)->name);
     }
 
-    return length;
+    return static_cast<double>(length);
 }
 
 double TransportCatalogue::ComputeCurvature(const std::string& name) const

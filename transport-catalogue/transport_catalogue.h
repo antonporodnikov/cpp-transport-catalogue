@@ -75,7 +75,7 @@ public:
 
     int ComputeUniqueStopsCount(const std::string& bus_name) const;
 
-    int ComputeRouteLength(const std::string& name) const;
+    double ComputeRouteLength(const std::string& name) const;
 
     double ComputeCurvature(const std::string& name) const;
 
