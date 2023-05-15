@@ -1,14 +1,11 @@
 #pragma once
 
-#include "geo.h"
 #include "transport_catalogue.h"
 
 #include <iomanip>
 #include <iostream>
 #include <istream>
 
-using transport_catalogue::structs::Stop;
-using transport_catalogue::structs::Bus;
 using transport_catalogue::TransportCatalogue;
 
 namespace stat_reader {

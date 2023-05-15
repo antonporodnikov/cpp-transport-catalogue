@@ -5,7 +5,6 @@
 
 #include <istream>
 
-using transport_catalogue::structs::Stop;
 using transport_catalogue::TransportCatalogue;
 
 namespace input_reader {
