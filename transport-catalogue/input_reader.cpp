@@ -209,7 +209,7 @@ std::pair<std::string, geo::Coordinates> ParseStopRequest(std::string& request)
 }
 
 std::pair<std::string, std::vector<std::string>> ParseBusRequest(
-    TransportCatalogue& catalogue, std::string& request)
+    std::string& request)
 {
     const std::string name = details::GetName(request);
     details::CutName(request);
@@ -254,7 +254,7 @@ void ProcessingInput(TransportCatalogue& catalogue, std::istream& input)
 
     for (std::string& request : queue.BusesQueue)
     {
-        const auto bus_data = parsers::ParseBusRequest(catalogue, request);
+        const auto bus_data = parsers::ParseBusRequest(request);
 
         catalogue.AddBus(std::move(bus_data.first), bus_data.second);
     }
