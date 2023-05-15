@@ -239,8 +239,7 @@ void ParseDistanceRequest(TransportCatalogue& catalogue, std::string& request)
 
     for (const auto& stop_dist : stops_dists)
     {
-        catalogue.AddDistance({catalogue.GetStop(stop_from),
-            catalogue.GetStop(stop_dist.first)}, stop_dist.second);
+        catalogue.AddDistance(stop_from, stop_dist.first, stop_dist.second);
     }
 
     request = stop_from + ": " + request;

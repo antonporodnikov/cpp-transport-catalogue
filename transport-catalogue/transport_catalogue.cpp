@@ -58,10 +58,10 @@ void TransportCatalogue::AddBus(const std::string&& name,
     }
 }
 
-void TransportCatalogue::AddDistance(const std::pair<
-    structs::Stop*, structs::Stop*>& stops, int distance)
+void TransportCatalogue::AddDistance(const std::string& stop_from,
+    const std::string& stop_to, int distance)
 {
-    stops_to_distance_[stops] = distance;
+    stops_to_distance_[{GetStop(stop_from), GetStop(stop_to)}] = distance;
 }
         
 structs::Stop* TransportCatalogue::GetStop(const std::string& name) const

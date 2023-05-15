@@ -63,7 +63,7 @@ public:
     void AddBus(const std::string&& name,
         const std::vector<structs::Stop*>&& stops);
     
-    void AddDistance(const std::pair<structs::Stop*, structs::Stop*>& stops,
+    void AddDistance(const std::string& stop_from, const std::string& stop_to,
         int distance);
 
     structs::Stop* GetStop(const std::string& name) const;
