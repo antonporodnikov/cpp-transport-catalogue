@@ -1,35 +1,48 @@
 #pragma once
 
 #include "geo.h"
-#include "input_reader.h"
 #include "transport_catalogue.h"
 
-#include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <istream>
+
+using transport_catalogue::structs::Stop;
+using transport_catalogue::structs::Bus;
+using transport_catalogue::TransportCatalogue;
 
 namespace stat_reader {
 
-namespace compute {
+namespace details {
 
-double Length(const input::Bus* bus_ptr);
+bool IsStop(const std::string& label_and_name);
 
-std::tuple<int, int, double> Data(
-    const transport_catalogue::TransportCatalogue& catalogue,
-    std::string& name);
+void CutSpaces(std::string& text);
 
-int Curv(const transport_catalogue::TransportCatalogue& catalogue,
-    std::string& name);
+std::string GetName(const std::string& request, const std::string& label);
 
 }
 
-void ProcessOutputBus(const transport_catalogue::TransportCatalogue& catalogue,
-    std::string& name);
+namespace prints {
 
-void ProcessOutputStop(const transport_catalogue::TransportCatalogue& catalogue,
-    std::string& name);
+void PrintValidStopRequest(TransportCatalogue& catalogue,
+    const std::string& request);
 
-void Output(std::istream& input,
-    const transport_catalogue::TransportCatalogue& catalogue);
+void PrintStopRequest(TransportCatalogue& catalogue, std::string& request);
+
+void PrintValidBusRequest(TransportCatalogue& catalogue,
+    const std::string& request);
+
+void PrintBusRequest(TransportCatalogue& catalogue, std::string& request);
+
+}
+
+namespace parsers {
+
+void ParseRequests(TransportCatalogue& catalogue, std::istream& input);
+
+}
+
+void OutputResponse(TransportCatalogue& catalogue, std::istream& input);
 
 }

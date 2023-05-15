@@ -1,48 +1,13 @@
 #include "input_reader.h"
 
-namespace input {
-
-Stop::Stop(const std::string& stop_name, const geo::Coordinates& stop_coords)
-    : name(stop_name), coords(stop_coords)
-{
-}
-
-Bus::Bus(const std::string& bus_name, const std::vector<Stop*>& bus_stops)
-    : name(bus_name), stops(bus_stops)
-{
-}
-
-bool IsStop(const std::string& label)
-{
-    return label.find("Stop") != std::string::npos;
-}
-
-RequestQueue Processing(std::istream& input)
-{
-    RequestQueue result;
-
-    std::string request;
-    std::getline(input, request);
-    int request_count = std::stoi(request);
-    for (int i = 0; i < request_count; ++i)
-    {
-        std::getline(input, request);
-        const auto colon = request.find(':');
-        if (IsStop(request.substr(0, colon)))
-        {
-            result.Stops.push_back(std::move(request));
-            continue;
-        }
-
-        result.Buses.push_back(std::move(request));
-    }
-
-    return result;
-}
-
-namespace parsers {
+namespace input_reader {
 
 namespace details {
+
+bool IsStop(const std::string& label_and_name)
+{
+    return label_and_name.find("Stop") != std::string::npos;
+}
 
 void CutSpaces(std::string& text)
 {
@@ -57,123 +22,255 @@ void CutSpaces(std::string& text)
     }
 }
 
-std::string CutName(const std::string& request, const std::string& label)
+void CutLabel(std::string& request, const std::string&& label)
 {
-    std::string name = request.substr(request.find(label) + label.size());
-    name = name.substr(0, name.find(':'));
+    request = request.substr(request.find(label) + label.size());
+    CutSpaces(request);
+}
+
+std::string GetName(const std::string& request)
+{
+    std::string name = request.substr(0, request.find(':'));
     CutSpaces(name);
 
     return name;
 }
 
-geo::Coordinates CutCoords(const std::string& request)
+void CutName(std::string& request)
 {
-    std::string coords = request.substr(request.find(':') + 1);
-    std::string lat_str = coords.substr(0, coords.find(','));
+    request = request.substr(request.find(':') + 1);
+    CutSpaces(request);
+}
+
+geo::Coordinates GetCoords(const std::string& request)
+{
+    std::string lat_str = request.substr(0, request.find(','));
     CutSpaces(lat_str);
-    std::string lng_str = coords.substr(coords.find(',') + 1);
+
+    std::string lng_str = request.substr(request.find(',') + 1);
+    lng_str = lng_str.substr(0, lng_str.find(','));
     CutSpaces(lng_str);
 
     return {std::stod(lat_str), std::stod(lng_str)};
 }
 
-std::vector<std::string> CutRoute(const std::string& request,
-    const std::string& del)
+void CutCoords(std::string& request)
 {
-    std::vector<std::string> routes;
+    const int COORDS_COUNT = 2;
 
-    std::string route = request.substr(request.find(':') + 1);
+    if (request.find(" to ") == std::string::npos)
+    {
+        request = "";
+
+        return;
+    }
+
+    for (int i = 0; i < COORDS_COUNT; ++i)
+    {
+        request = request.substr(request.find(',') + 1);
+    }
+
+    CutSpaces(request);
+}
+
+void FillRoute(std::vector<std::string>& route, const std::string& request,
+    const std::string&& del)
+{
+    std::string route_buf = request;
     std::string stop;
-    while (route.find(del) != std::string::npos)
+    while (route_buf.find(del) != std::string::npos)
     {
-        stop = route.substr(0, route.find(del));
+        stop = route_buf.substr(0, route_buf.find(del));
         CutSpaces(stop);
-        routes.push_back(stop);
 
-        route = route.substr(route.find(del) + del.size());
+        route.push_back(stop);
+
+        route_buf = route_buf.substr(route_buf.find(del) + del.size());
     }
 
-    CutSpaces(route);
-    routes.push_back(route);
-
-    return routes;
+    CutSpaces(route_buf);
+    route.push_back(route_buf);
 }
 
-}
-
-input::Stop Stop(const std::string& request)
+std::vector<std::string> GetRoute(const std::string& request)
 {
-    std::string name = details::CutName(request, "Stop");
-    geo::Coordinates coords = details::CutCoords(request);
+    std::vector<std::string> route;
 
-    return input::Stop(name, coords);
+    if (request.find(" > ") != std::string::npos)
+    {
+        FillRoute(route, request, " > ");
+
+        return route;
+    }
+
+    FillRoute(route, request, " - ");
+
+    std::vector<std::string> reverse_route;
+    for (auto it = std::next(route.rbegin(), 1); it != route.rend();
+        it = std::next(it, 1))
+    {
+        reverse_route.push_back(*it);
+    }
+
+    route.insert(route.end(), reverse_route.begin(), reverse_route.end());
+
+    return route;
 }
 
-std::tuple<std::string, std::vector<std::string>, bool>
-    Bus(const std::string& request)
+std::string GetStopTo(const std::string& dist_stop)
 {
-    bool circular;
-    std::string del;
+    std::string stop_to = dist_stop.substr(dist_stop.find(" to ") + 4);
+    CutSpaces(stop_to);
 
-    if (request.find(" - ") != std::string::npos)
-    {
-        del = " - ";
-        circular = false;
-    }
-    else
-    {
-        del = " > ";
-        circular = true;
-    }
-
-    std::string name = details::CutName(request, "Bus");
-    std::vector<std::string> route = details::CutRoute(request, del);
-
-    return {name, route, circular};
+    return stop_to;
 }
 
-std::pair<std::string, std::vector<std::string>> StopsDistance(
+int GetDistance(const std::string& dist_stop)
+{
+    std::string dist = dist_stop.substr(0, dist_stop.find('m'));
+    CutSpaces(dist);
+
+    return std::stoi(dist);
+}
+
+void FillDistances(std::vector<std::pair<std::string, int>>& stops_to,
     const std::string& request)
 {
-    std::string name = details::CutName(request, "Stop");
-    std::vector<std::string> distances = {};
+    std::string request_buf = request;
 
-    std::string temp = request.substr(request.find(',') + 1);
-    if (temp.find(',') == std::string::npos)
+    if (request_buf.size() == 0)
     {
-        return {name, distances};
-    }
-    std::string all_distances = temp.substr(temp.find(',') + 1);
-    std::string distance; 
-    while (all_distances.find(',') != std::string::npos)
-    {
-        distance = all_distances.substr(0, all_distances.find(',')); 
-        details::CutSpaces(distance);
-        distances.push_back(distance);
-
-        all_distances = all_distances.substr(all_distances.find(',') + 1);
+        return;
     }
 
-    details::CutSpaces(all_distances);
-    distances.push_back(all_distances);
+    std::string dist_stop;
+    std::string stop_to;
+    int distance = 0;
+    while (request_buf.find(',') != std::string::npos)
+    {
+        dist_stop = request_buf.substr(0, request_buf.find(','));
 
-    return {name, distances};
+        stop_to = GetStopTo(dist_stop);
+        distance = GetDistance(dist_stop);
+
+        stops_to.push_back({stop_to, distance});
+
+        request_buf = request_buf.substr(request_buf.find(',') + 1);
+    }
+
+    stop_to = GetStopTo(request_buf);
+    distance = GetDistance(request_buf);
+
+    stops_to.push_back({stop_to, distance});
 }
 
-std::pair<std::string, int> Distance(const std::string& request)
+}
+
+namespace parsers {
+
+RequestQueue ParseInput(std::istream& input)
 {
-    std::string name = request.substr(request.find("to") + 2);
-    details::CutSpaces(name);
-    std::string distance_str = request.substr(0, request.find('m'));
+    RequestQueue queue;
 
-    return {name, std::stoi(distance_str)};
+    std::string request;
+    std::getline(input, request);
+    const int request_count = std::stoi(request);
+    for (int i = 0; i < request_count; ++i)
+    {
+        std::getline(input, request);
+        const auto colon = request.find(':');
+        
+        if (details::IsStop(request.substr(0, colon)))
+        {
+            details::CutLabel(request, "Stop");
+            queue.StopsQueue.push_back(std::move(request));
+
+            continue;
+        }
+
+        details::CutLabel(request, "Bus");
+        queue.BusesQueue.push_back(std::move(request));
+    }
+
+    return queue;
 }
 
-std::string Output(const std::string& request, const std::string& label)
+std::pair<std::string, geo::Coordinates> ParseStopRequest(std::string& request)
 {
-    return details::CutName(request, label);
+    const std::string name = details::GetName(request);
+    details::CutName(request);
+
+    const geo::Coordinates coords = details::GetCoords(request);
+    details::CutCoords(request);
+
+    request = name + ": " + request;
+
+    return {name, coords};
 }
 
+std::pair<std::string, std::vector<Stop*>> ParseBusRequest(
+    TransportCatalogue& catalogue, std::string& request)
+{
+    const std::string name = details::GetName(request);
+    details::CutName(request);
+
+    const std::vector<std::string> route_str = details::GetRoute(request);
+
+    std::vector<Stop*> route;
+    route.reserve(route_str.size());
+    for (const std::string& stop : route_str)
+    {
+        route.push_back(catalogue.GetStop(stop));
+    }
+
+    request = name + ": " + request;
+
+    return {name, route};
+}
+
+void ParseDistanceRequest(TransportCatalogue& catalogue, std::string& request)
+{
+    const std::string stop_from = details::GetName(request);
+    details::CutName(request);
+
+    std::vector<std::pair<std::string, int>> stops_dists = {};
+    details::CutSpaces(request);
+    details::FillDistances(stops_dists, request);
+
+    for (const auto& stop_dist : stops_dists)
+    {
+        catalogue.AddDistance({catalogue.GetStop(stop_from),
+            catalogue.GetStop(stop_dist.first)}, stop_dist.second);
+    }
+
+    request = stop_from + ": " + request;
+}
+
+}
+
+void ProcessingInput(TransportCatalogue& catalogue, std::istream& input)
+{
+    RequestQueue queue = parsers::ParseInput(input);
+
+    for (std::string& request : queue.StopsQueue)
+    {
+        const auto stop_data = parsers::ParseStopRequest(request);
+
+        catalogue.AddStop(std::move(stop_data.first),
+            std::move(stop_data.second));
+    }
+
+    for (std::string& request : queue.BusesQueue)
+    {
+        const auto bus_data = parsers::ParseBusRequest(catalogue, request);
+
+        catalogue.AddBus(std::move(bus_data.first), std::move(bus_data.second));
+    }
+
+    for (std::string& request : queue.StopsQueue)
+    {
+        parsers::ParseDistanceRequest(catalogue, request);
+    }
 }
 
 }

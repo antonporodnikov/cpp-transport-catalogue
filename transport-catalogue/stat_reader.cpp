@@ -2,130 +2,50 @@
 
 namespace stat_reader {
 
-namespace compute {
+namespace details {
 
-double Length(const input::Bus* bus_ptr)
+bool IsStop(const std::string& label_and_name)
 {
-    double result = 0.0;
-    for (auto it = bus_ptr->stops.begin();
-        it != std::next(bus_ptr->stops.end(), -1); it = std::next(it, +1)) 
+    return label_and_name.find("Stop") != std::string::npos;
+}
+
+void CutSpaces(std::string& text)
+{
+    while (text[0] == ' ')
     {
-        input::Stop* stop_a = *it;
-        input::Stop* stop_b = *(it + 1);
-        result += geo::ComputeDistance(stop_a->coords, stop_b->coords);
+        text.erase(0, 1);
     }
 
-    return result;
-}
-
-std::tuple<int, int, double> Data(
-    const transport_catalogue::TransportCatalogue& catalogue,
-    std::string& name)
-{
-    using BusnameToBusType = std::unordered_map<std::string_view,
-        input::Bus*, transport_catalogue::details::ObjnameToObjHasher>; 
-    
-    const BusnameToBusType& busname_to_bus = catalogue.GetBusnameToBus();
-    input::Bus* bus_ptr = busname_to_bus.at(name);
-    const int stops_amount = bus_ptr->stops.size();
-
-    std::vector<input::Stop*> stops = bus_ptr->stops;
-    std::sort(stops.begin(), stops.end());
-    int unique_stops = std::unique(stops.begin(), stops.end()) - stops.begin();
-
-    const double route_lenght = Length(bus_ptr);
-
-    return {stops_amount, unique_stops, route_lenght};
-}
-
-int Curv(const transport_catalogue::TransportCatalogue& catalogue,
-    std::string& name)
-{
-    using StopsDistanceType = std::unordered_map<std::pair<input::Stop*,
-        input::Stop*>, int, transport_catalogue::details::StopsDistanceHasher>;
-
-    using BusnameToBusType = std::unordered_map<std::string_view,
-        input::Bus*, transport_catalogue::details::ObjnameToObjHasher>; 
-    
-    const BusnameToBusType& busname_to_bus = catalogue.GetBusnameToBus();
-    input::Bus* bus_ptr = busname_to_bus.at(name);
-
-    const StopsDistanceType& stops_distance = catalogue.GetStopsDistance();
-
-    int lenght = 0;
-    auto first_stop = bus_ptr->stops.begin();
-    auto second_stop = bus_ptr->stops.begin();
-    second_stop++;
-    for (; second_stop != bus_ptr->stops.end(); ++first_stop, ++second_stop)
+    while (*next(text.end(), -1) == ' ')
     {
-        if (stops_distance.count({*first_stop, *second_stop}) == 0)
-        {
-            lenght += stops_distance.at({*second_stop, *first_stop});
-
-            continue;
-        }
-
-        lenght += stops_distance.at({*first_stop, *second_stop});
+        text.pop_back();
     }
-
-    return lenght;
 }
 
-}
-
-void ProcessOutputBus(const transport_catalogue::TransportCatalogue& catalogue,
-    std::string& name)
+std::string GetName(const std::string& request, const std::string& label)
 {
-    using BusnameToBusType = std::unordered_map<std::string_view,
-        input::Bus*, transport_catalogue::details::ObjnameToObjHasher>; 
-    
-    const BusnameToBusType& busname_to_bus = catalogue.GetBusnameToBus();
+    std::string name = request.substr(request.find(label) + label.size());
+    CutSpaces(name);
 
-    if (busname_to_bus.count(name) == 0)
-    {
-        std::cout << "Bus " << name << ": " << "not found" << std::endl;
-        
-        return;
-    }
-
-    std::tuple<int, int, double> route_data = compute::Data(catalogue, name);
-    
-    int stops = std::get<0>(route_data);
-    int unique_stops = std::get<1>(route_data);
-    int lenght = compute::Curv(catalogue, name);
-    
-    double lenght_raw = std::get<2>(route_data);
-    double curv = lenght / static_cast<double>(lenght_raw);
-
-    std::cout << "Bus " << name << ": "
-        << stops << " stops on route, "
-        << unique_stops << " unique stops, "
-        << std::scientific << std::setprecision(5)
-        << static_cast<double>(lenght) << " route length, ";
-
-        std::cout << std::defaultfloat;
-        std::cout << curv << " curvature" << std::endl;
+    return name;
 }
 
-void ProcessOutputStop(const transport_catalogue::TransportCatalogue& catalogue,
-    std::string& name)
+}
+
+namespace prints {
+
+void PrintValidStopRequest(TransportCatalogue& catalogue,
+    const std::string& request)
 {
-    using StopToBusesType = std::unordered_map<std::string,
-        std::set<std::string>,
-        transport_catalogue::details::ObjnameToObjHasherStr>;
-    
-    std::cout << "Stop " << name << ": ";
+    const std::string LABEL = "Stop";
+    const std::string name = details::GetName(request, LABEL);
 
-    const StopToBusesType& stop_to_buses = catalogue.GetStopToBuses();
+    std::cout << LABEL << ' ' << name << ": ";
 
-    if (stop_to_buses.count(name) == 0)
-    {
-        std::cout << "not found" << std::endl;
+    const std::set<std::string_view> buses_to_stop =
+        catalogue.GetBusesToStop(name);
 
-        return;
-    }
-
-    if (stop_to_buses.at(name).empty())
+    if (buses_to_stop.empty())
     {
         std::cout << "no buses" << std::endl;
 
@@ -133,37 +53,86 @@ void ProcessOutputStop(const transport_catalogue::TransportCatalogue& catalogue,
     }
 
     std::cout << "buses";
-    const std::set<std::string>& buses_at_stop = stop_to_buses.at(name);
-    for (auto it = buses_at_stop.begin(); it != buses_at_stop.end();
-        it = std::next(it, +1))
+    for (std::string_view bus : buses_to_stop)
     {
-        std::cout << ' ' << *it;
+        std::cout << ' ' << bus;
     }
 
     std::cout << std::endl;
 }
 
-void Output(std::istream& input,
-    const transport_catalogue::TransportCatalogue& catalogue)
+void PrintStopRequest(TransportCatalogue& catalogue, std::string& request)
+{
+    try
+    {
+        PrintValidStopRequest(catalogue, request);
+    }
+    catch (const std::invalid_argument&)
+    {
+        std::cout << "not found" << std::endl;
+    }
+}
+
+void PrintValidBusRequest(TransportCatalogue& catalogue,
+    const std::string& request)
+{
+    const std::string LABEL = "Bus";
+    const std::string name = details::GetName(request, LABEL);
+
+    std::cout << LABEL << ' ' << name << ": "
+        << catalogue.ComputeStopsCount(name) << " stops on route, "
+        << catalogue.ComputeUniqueStopsCount(name) << " unique stops, ";
+
+    std::cout << std::scientific << std::setprecision(5)
+        << catalogue.ComputeRouteLength(name) << " route length, ";
+    
+    std::cout << std::defaultfloat
+        << catalogue.ComputeCurvature(name) << " curvature";
+
+    std::cout << std::endl;
+}
+
+void PrintBusRequest(TransportCatalogue& catalogue, std::string& request)
+{
+    try
+    {
+        PrintValidBusRequest(catalogue, request);
+    }
+    catch (const std::invalid_argument&)
+    {
+        std::cout << "not found" << std::endl;
+    }
+}
+
+}
+
+namespace parsers {
+
+void ParseRequests(TransportCatalogue& catalogue, std::istream& input)
 {
     std::string request;
     std::getline(input, request);
-    int request_count = std::stoi(request);
+    const int request_count = std::stoi(request);
     for (int i = 0; i < request_count; ++i)
     {
         std::getline(input, request);
-        std::string label_name = request.substr(0, request.find(':'));
-        if (label_name.find("Bus") != std::string::npos)
+        
+        if (details::IsStop(request))
         {
-            std::string name = input::parsers::Output(request, "Bus");
-            ProcessOutputBus(catalogue, name);
+            prints::PrintStopRequest(catalogue, request);
 
             continue;
         }
 
-        std::string name = input::parsers::Output(request, "Stop");
-        ProcessOutputStop(catalogue, name);
+        prints::PrintBusRequest(catalogue, request);
     }
+}
+
+}
+
+void OutputResponse(TransportCatalogue& catalogue, std::istream& input)
+{
+    parsers::ParseRequests(catalogue, input);
 }
 
 }

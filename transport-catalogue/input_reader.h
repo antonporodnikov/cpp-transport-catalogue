@@ -1,65 +1,63 @@
 #pragma once
 
 #include "geo.h"
+#include "transport_catalogue.h"
 
 #include <istream>
-#include <string>
-#include <tuple>
-#include <vector>
 
-namespace input {
+using transport_catalogue::structs::Stop;
+using transport_catalogue::TransportCatalogue;
+
+namespace input_reader {
 
 struct RequestQueue {
-    std::vector<std::string> Stops;
-    std::vector<std::string> Buses;
+    std::vector<std::string> StopsQueue;
+    std::vector<std::string> BusesQueue;
 };
-
-struct Stop {
-    Stop() = default;
-    Stop(const std::string& stop_name, const geo::Coordinates& stop_coords);
-
-    std::string name;
-    geo::Coordinates coords;
-};
-
-struct Bus {
-    Bus(const std::string& bus_name, const std::vector<Stop*>& bus_stops);
-
-    std::string name;
-    std::vector<Stop*> stops;
-};
-
-bool IsStop(const std::string& request);
-
-RequestQueue Processing(std::istream& input);
-
-namespace parsers {
 
 namespace details {
 
+bool IsStop(const std::string& label_and_name);
+
 void CutSpaces(std::string& text);
 
-std::string CutName(const std::string& request, const std::string& label);
+void CutLabel(std::string& request, const std::string&& label);
 
-geo::Coordinates CutCoords(const std::string& request);
+std::string GetName(const std::string& request);
 
-std::vector<std::string> CutRoute(const std::string& request,
-    const std::string& del);
+void CutName(std::string& request);
 
-}
+geo::Coordinates GetCoords(const std::string& request);
 
-input::Stop Stop(const std::string& request);
+void CutCoords(std::string& request);
 
-std::tuple<std::string, std::vector<std::string>, bool>
-    Bus(const std::string& request);
+void FillRoute(std::vector<std::string>& route, const std::string& request,
+    const std::string&& del);
 
-std::pair<std::string, std::vector<std::string>> StopsDistance(
+std::vector<std::string> GetRoute(const std::string& request);
+
+std::string GetStopTo(const std::string& dist_stop);
+
+int GetDistance(const std::string& dist_stop);
+
+void FillDistances(std::vector<std::pair<std::string, int>>& stops_to,
     const std::string& request);
 
-std::pair<std::string, int> Distance(const std::string& request);
+}
 
-std::string Output(const std::string& request, const std::string& label);
+namespace parsers {
+
+RequestQueue ParseInput(std::istream& input);
+
+std::pair<std::string, geo::Coordinates> ParseStopRequest(std::string& request);
+
+std::pair<std::string, std::vector<Stop*>> ParseBusRequest(
+    TransportCatalogue& catalogue, std::string& request);
+
+void ParseDistanceRequest(TransportCatalogue& catalogue, std::string& request);
 
 }
+
+void ProcessingInput(TransportCatalogue& catalogue, std::istream& input);
 
 }
