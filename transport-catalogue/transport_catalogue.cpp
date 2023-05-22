@@ -29,20 +29,20 @@ std::size_t StopPtrsHasher::operator()(const std::pair<
 
 }
 
-void TransportCatalogue::AddStop(const std::string&& name,
-    const geo::Coordinates&& coords)
+void TransportCatalogue::AddStop(const std::string& name,
+    const geo::Coordinates& coords)
 {
-    stops_.push_back({std::move(name), std::move(coords)});
+    stops_.push_back({name, coords});
 
-    const auto it = std::next(stops_.end(), -1);
-    std::string_view name_strv = it->name;
+    structs::Stop& stop = stops_.back();
+    std::string_view name_strv = stop.name;
 
-    stopname_to_stop_[name_strv] = &(*it);
+    stopname_to_stop_[name_strv] = &stop;
 
     stopname_to_buses_[name_strv] = {};
 }
 
-void TransportCatalogue::AddBus(const std::string&& name,
+void TransportCatalogue::AddBus(const std::string& name,
     const std::vector<std::string>& stops)
 {
     std::vector<structs::Stop*> stops_ptr;
@@ -52,7 +52,7 @@ void TransportCatalogue::AddBus(const std::string&& name,
         stops_ptr.push_back(GetStop(stop));
     }
 
-    buses_.push_back({std::move(name), stops_ptr});
+    buses_.push_back({name, stops_ptr});
 
     const auto it = std::next(buses_.end(), -1);
     std::string_view name_strv = it->name;

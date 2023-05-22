@@ -58,9 +58,9 @@ public:
     using StopsToDistance = std::unordered_map<std::pair<
         structs::Stop*,structs::Stop*>, int, hashers::StopPtrsHasher>;
 
-    void AddStop(const std::string&& name, const geo::Coordinates&& coords);
+    void AddStop(const std::string& name, const geo::Coordinates& coords);
 
-    void AddBus(const std::string&& name,
+    void AddBus(const std::string& name,
         const std::vector<std::string>& stops);
     
     void AddDistance(const std::string& stop_from, const std::string& stop_to,

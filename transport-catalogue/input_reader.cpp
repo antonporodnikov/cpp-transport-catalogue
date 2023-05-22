@@ -248,15 +248,14 @@ void ProcessingInput(TransportCatalogue& catalogue, std::istream& input)
     {
         const auto stop_data = parsers::ParseStopRequest(request);
 
-        catalogue.AddStop(std::move(stop_data.first),
-            std::move(stop_data.second));
+        catalogue.AddStop(stop_data.first, stop_data.second);
     }
 
     for (std::string& request : queue.BusesQueue)
     {
         const auto bus_data = parsers::ParseBusRequest(request);
 
-        catalogue.AddBus(std::move(bus_data.first), bus_data.second);
+        catalogue.AddBus(bus_data.first, bus_data.second);
     }
 
     for (std::string& request : queue.StopsQueue)

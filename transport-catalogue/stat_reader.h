@@ -3,7 +3,6 @@
 #include "transport_catalogue.h"
 
 #include <iostream>
-#include <istream>
 
 using transport_catalogue::TransportCatalogue;
 
@@ -22,23 +21,27 @@ std::string GetName(const std::string& request, const std::string& label);
 namespace prints {
 
 void PrintValidStopRequest(TransportCatalogue& catalogue,
-    const std::string& request);
+    const std::string& request, std::ostream& output);
 
-void PrintStopRequest(TransportCatalogue& catalogue, std::string& request);
+void PrintStopRequest(TransportCatalogue& catalogue, std::string& request,
+    std::ostream& output);
 
 void PrintValidBusRequest(TransportCatalogue& catalogue,
-    const std::string& request);
+    const std::string& request, std::ostream& output);
 
-void PrintBusRequest(TransportCatalogue& catalogue, std::string& request);
+void PrintBusRequest(TransportCatalogue& catalogue, std::string& request,
+    std::ostream& output);
 
 }
 
 namespace parsers {
 
-void ParseRequests(TransportCatalogue& catalogue, std::istream& input);
+void ParseRequests(TransportCatalogue& catalogue, std::istream& input,
+    std::ostream& output);
 
 }
 
-void OutputResponse(TransportCatalogue& catalogue, std::istream& input);
+void OutputResponse(TransportCatalogue& catalogue, std::istream& input,
+    std::ostream& output);
 
 }
