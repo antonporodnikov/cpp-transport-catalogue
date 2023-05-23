@@ -9,7 +9,7 @@ using transport_catalogue::TransportCatalogue;
 namespace input_reader {
 
 struct RequestQueue {
-    std::vector<std::string> StopsQueue;
+    std::vector<std::string> StopsQueue;  // CHANGE NAMES
     std::vector<std::string> BusesQueue;
 };
 

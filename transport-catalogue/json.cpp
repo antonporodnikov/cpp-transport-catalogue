@@ -177,7 +177,8 @@ std::string ProcessString(std::istream& input)
                     s.push_back('\\');
                     break;
                 default:
-                    throw ParsingError("Unrecognized escape sequence \\"s + escaped_char);
+                    throw ParsingError(
+                        "Unrecognized escape sequence \\"s + escaped_char);
             }
         }
         else if (ch == '\n' || ch == '\r')
@@ -186,7 +187,6 @@ std::string ProcessString(std::istream& input)
         }
         else
         {
-            // Просто считываем очередной символ и помещаем его в результирующую строку
             s.push_back(ch);
         }
 
