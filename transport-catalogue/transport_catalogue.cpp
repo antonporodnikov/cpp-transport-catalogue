@@ -17,7 +17,7 @@ std::size_t StringViewHasher::operator()(const std::string_view name) const
 }
 
 std::size_t StopPtrsHasher::operator()(const std::pair<
-    structs::Stop*, structs::Stop*> stops) const
+    domain::Stop*, domain::Stop*> stops) const
 {
     const int MULT = 54;
 
@@ -34,7 +34,7 @@ void TransportCatalogue::AddStop(const std::string& name,
 {
     stops_.push_back({name, coords});
 
-    structs::Stop& stop = stops_.back();
+    domain::Stop& stop = stops_.back();
     std::string_view name_strv = stop.name;
 
     stopname_to_stop_[name_strv] = &stop;
@@ -45,7 +45,7 @@ void TransportCatalogue::AddStop(const std::string& name,
 void TransportCatalogue::AddBus(const std::string& name,
     const std::vector<std::string>& stops)
 {
-    std::vector<structs::Stop*> stops_ptr;
+    std::vector<domain::Stop*> stops_ptr;
     stops_ptr.reserve(stops.size());
     for (const std::string& stop : stops)
     {
@@ -59,7 +59,7 @@ void TransportCatalogue::AddBus(const std::string& name,
 
     busname_to_bus_[name_strv] = &(*it);
 
-    for (const structs::Stop* stop_ptr : stops_ptr)
+    for (const domain::Stop* stop_ptr : stops_ptr)
     {
         stopname_to_buses_.at(stop_ptr->name).insert(name_strv);
     }
@@ -71,7 +71,7 @@ void TransportCatalogue::AddDistance(const std::string& stop_from,
     stops_to_distance_[{GetStop(stop_from), GetStop(stop_to)}] = distance;
 }
         
-structs::Stop* TransportCatalogue::GetStop(const std::string& name) const
+domain::Stop* TransportCatalogue::GetStop(const std::string& name) const
 {
     if (stopname_to_stop_.count(name) == 0)
     {
@@ -100,7 +100,7 @@ int TransportCatalogue::ComputeStopsCount(const std::string& bus_name) const
 int TransportCatalogue::ComputeUniqueStopsCount(
     const std::string& bus_name) const
 {
-    const std::set<structs::Stop*> unique_stops(GetBus(bus_name)->stops.begin(),
+    const std::set<domain::Stop*> unique_stops(GetBus(bus_name)->stops.begin(),
         GetBus(bus_name)->stops.end());
 
     return static_cast<int>(unique_stops.size());
@@ -109,7 +109,7 @@ int TransportCatalogue::ComputeUniqueStopsCount(
 double TransportCatalogue::ComputeRouteLength(const std::string& name) const
 {
     int length = 0;
-    const structs::Bus* bus_ptr = GetBus(name);
+    const domain::Bus* bus_ptr = GetBus(name);
 
     auto stop_from = bus_ptr->stops.begin();
     auto stop_to = std::next(stop_from, 1);
@@ -126,7 +126,7 @@ double TransportCatalogue::ComputeCurvature(const std::string& name) const
 {
     const int length = ComputeRouteLength(name);
     double raw_length = 0.0;
-    const structs::Bus* bus_ptr = GetBus(name);
+    const domain::Bus* bus_ptr = GetBus(name);
 
     auto stop_from = bus_ptr->stops.begin();
     auto stop_to = std::next(stop_from, 1);
@@ -140,7 +140,7 @@ double TransportCatalogue::ComputeCurvature(const std::string& name) const
     return static_cast<double>(length) / raw_length;
 }
 
-structs::Bus* TransportCatalogue::GetBus(const std::string& name) const
+domain::Bus* TransportCatalogue::GetBus(const std::string& name) const
 {
     if (busname_to_bus_.count(name) == 0)
     {
@@ -153,8 +153,8 @@ structs::Bus* TransportCatalogue::GetBus(const std::string& name) const
 int TransportCatalogue::GetDistance(const std::string& stop_from,
     const std::string& stop_to) const
 {
-    structs::Stop* stop_from_ptr = GetStop(stop_from);
-    structs::Stop* stop_to_ptr = GetStop(stop_to);
+    domain::Stop* stop_from_ptr = GetStop(stop_from);
+    domain::Stop* stop_to_ptr = GetStop(stop_to);
 
     const bool check_from_to = stops_to_distance_.count(
         {stop_from_ptr, stop_to_ptr}) > 0;
