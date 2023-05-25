@@ -1,6 +1,8 @@
 #pragma once
 
 #include "json.h"
+#include "map_renderer.h"
+#include "request_handler.h"
 #include "transport_catalogue.h"
 
 #include <istream>
@@ -9,46 +11,51 @@ using transport_catalogue::TransportCatalogue;
 
 namespace json_reader {
 
-namespace parsers {
+class JsonReader {
+public:
+    explicit JsonReader(std::istream& input);
 
-void ParseStopRequest(const json::Node& stop_request,
-    domain::RequestQueue& queue);
+    void UpdateCatalogue(TransportCatalogue& catalogue);
 
-void ParseBusRequest(const json::Node& bus_request,
-    domain::RequestQueue& queue);
+    void PrintStat(TransportCatalogue& catalogue, std::ostream& output);
 
-void ParseBaseRequests(const json::Node& base_requests,
-    domain::RequestQueue& queue);
+    const domain::RequestQueue& GetRequestQueue() const;
 
-void ParseStatRequest(const json::Node& stat_request,
-    domain::RequestQueue& queue);
+    map_renderer::RenderSettingsRequest GetRenderSettings() const;
 
-void ParseStatRequests(const json::Node& stat_requests,
-    domain::RequestQueue& queue);
+private:
+    domain::RequestQueue request_queue_;
+    map_renderer::RenderSettingsRequest render_settings_; 
 
-domain::RequestQueue ParseJSON(std::istream& input);
+    void ParseStopRequest(const json::Node& stop_request);
 
-}
+    void ParseBusRequest(const json::Node& bus_request);
 
-void ProcessingStopRequest(TransportCatalogue& catalogue,
-    const domain::StopRequest& request);
+    void ParseBaseRequests(const json::Node& base_requests);
 
-void ProcessingDistances(TransportCatalogue& catalogue,
-    const domain::StopRequest& request);
+    void ParseStatRequest(const json::Node& stat_request);
 
-void ProcessingBusRequest(TransportCatalogue& catalogue,
-    const domain::BusRequest& request);
+    void ParseStatRequests(const json::Node& stat_requests);
 
-void ProcessingInput(TransportCatalogue& catalogue,
-    const domain::RequestQueue& queue);
+    svg::Color FormatColor(const json::Node& color);
 
-json::Node ComputeStatRequest(TransportCatalogue& catalogue,
-    const domain::StatRequest& request);
+    void ParseRenderSettings(const json::Node& render_settings);
 
-json::Array ComputeJSON(TransportCatalogue& catalogue,
-    const domain::RequestQueue& queue);
+    void ParseJSON(std::istream& input);
 
-void ProcessingOutput(TransportCatalogue& catalogue,
-    const domain::RequestQueue& queue, std::ostream& output);
+    void ProcessingStopRequest(TransportCatalogue& catalogue,
+        const domain::StopRequest& request);
+
+    void ProcessingDistances(TransportCatalogue& catalogue,
+        const domain::StopRequest& request);
+
+    void ProcessingBusRequest(TransportCatalogue& catalogue,
+        const domain::BusRequest& request);
+
+    json::Node ComputeStatRequest(TransportCatalogue& catalogue,
+        const domain::StatRequest& request);
+
+    json::Array ComputeJSON(TransportCatalogue& catalogue);
+};
 
 }

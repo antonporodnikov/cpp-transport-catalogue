@@ -4,10 +4,51 @@ using namespace std::literals;
 
 namespace json_reader {
 
-namespace parsers {
+JsonReader::JsonReader(std::istream& input)
+{
+    JsonReader::ParseJSON(input);
+}
 
-void ParseStopRequest(const json::Node& stop_request,
-    domain::RequestQueue& queue)
+void JsonReader::UpdateCatalogue(TransportCatalogue& catalogue)
+{
+    if (!request_queue_.stops_requests.empty())
+    {
+        for (const domain::StopRequest& request : request_queue_.stops_requests)
+        {
+            ProcessingStopRequest(catalogue, request);
+        }
+
+        for (const domain::StopRequest& request : request_queue_.stops_requests)
+        {
+            ProcessingDistances(catalogue, request);
+        }
+    }
+
+    if (!request_queue_.buses_requests.empty())
+    {
+        for (const domain::BusRequest& request : request_queue_.buses_requests)
+        {
+            ProcessingBusRequest(catalogue, request);
+        }
+    }
+}
+
+void JsonReader::PrintStat(TransportCatalogue& catalogue, std::ostream& output)
+{
+    json::Print(json::Document{ComputeJSON(catalogue)}, output);
+}
+
+const domain::RequestQueue& JsonReader::GetRequestQueue() const
+{
+    return request_queue_;
+}
+
+map_renderer::RenderSettingsRequest JsonReader::GetRenderSettings() const
+{
+    return render_settings_;
+}
+
+void JsonReader::ParseStopRequest(const json::Node& stop_request)
 {
     const json::Dict& request = stop_request.AsMap();
 
@@ -25,10 +66,10 @@ void ParseStopRequest(const json::Node& stop_request,
         }
     }
 
-    queue.stops_requests.push_back({name, lat, lng, dists});
+    request_queue_.stops_requests.push_back({name, lat, lng, dists});
 }
             
-void ParseBusRequest(const json::Node& bus_request, domain::RequestQueue& queue)
+void JsonReader::ParseBusRequest(const json::Node& bus_request)
 {
     const json::Dict& request = bus_request.AsMap();
 
@@ -41,11 +82,10 @@ void ParseBusRequest(const json::Node& bus_request, domain::RequestQueue& queue)
         stops.push_back(stop.AsString());
     }
 
-    queue.buses_requests.push_back({name, stops, is_round});
+    request_queue_.buses_requests.push_back({name, stops, is_round});
 }
 
-void ParseBaseRequests(const json::Node& base_requests,
-    domain::RequestQueue& queue)
+void JsonReader::ParseBaseRequests(const json::Node& base_requests)
 {
     const json::Array& requests = base_requests.AsArray();
 
@@ -53,20 +93,19 @@ void ParseBaseRequests(const json::Node& base_requests,
     {
         if (request.AsMap().at("type").AsString() == "Stop")
         {
-            ParseStopRequest(request, queue);
+            ParseStopRequest(request);
             continue;
         }
 
         if (request.AsMap().at("type").AsString() == "Bus")
         {
-            ParseBusRequest(request, queue);
+            ParseBusRequest(request);
             continue;
         }
     }
 }
 
-void ParseStatRequest(const json::Node& stat_request,
-    domain::RequestQueue& queue)
+void JsonReader::ParseStatRequest(const json::Node& stat_request)
 {
     const json::Dict& request = stat_request.AsMap();
 
@@ -74,49 +113,108 @@ void ParseStatRequest(const json::Node& stat_request,
     const std::string type = request.at("type").AsString();
     const std::string name = request.at("name").AsString();
 
-    queue.stats_requests.push_back({id, type, name});
+    request_queue_.stats_requests.push_back({id, type, name});
 }
 
-void ParseStatRequests(const json::Node& stat_requests,
-    domain::RequestQueue& queue)
+void JsonReader::ParseStatRequests(const json::Node& stat_requests)
 {
     const json::Array& requests = stat_requests.AsArray();
 
     for (const json::Node& request : requests)
     {
-        ParseStatRequest(request, queue);
+        ParseStatRequest(request);
     }
 }
 
-domain::RequestQueue ParseJSON(std::istream& input)
+svg::Color JsonReader::FormatColor(const json::Node& color)
 {
-    domain::RequestQueue queue;
+    if (color.IsString())
+    {
+        return color.AsString();
+    }
+    
+    json::Array color_arr = color.AsArray();
+    if (color_arr.size() == 4)
+    {
+        svg::Rgba color_rgba{color_arr.at(0).AsInt(), color_arr.at(1).AsInt(),
+            color_arr.at(2).AsInt(), color_arr.at(3).AsDouble()};
 
+        return color_rgba;
+    }
+
+
+    svg::Rgb color_rgb{color_arr.at(0).AsInt(), color_arr.at(1).AsInt(),
+        color_arr.at(2).AsInt()};
+    
+    return color_rgb;
+}
+
+void JsonReader::ParseRenderSettings(const json::Node& render_settings)
+{
+    const json::Dict& request = render_settings.AsMap();
+
+    render_settings_.width = request.at("width").AsDouble();
+    render_settings_.height = request.at("height").AsDouble();
+    render_settings_.padding = request.at("padding").AsDouble();
+    render_settings_.line_width = request.at("line_width").AsDouble();
+    render_settings_.stop_radius = request.at("stop_radius").AsDouble();
+    render_settings_.bus_label_font_size =
+        request.at("bus_label_font_size").AsInt();
+    
+    const json::Array& bus_label_offset =
+        request.at("bus_label_offset").AsArray();
+    render_settings_.bus_label_offset = {bus_label_offset.at(0).AsDouble(),
+        bus_label_offset.at(1).AsDouble()};
+
+    render_settings_.stop_label_font_size =
+        request.at("stop_label_font_size").AsInt();
+    
+    const json::Array& stop_label_offset =
+        request.at("stop_label_offset").AsArray();
+    render_settings_.stop_label_offset = {stop_label_offset.at(0).AsDouble(),
+        stop_label_offset.at(1).AsDouble()};
+
+    render_settings_.underlayer_color =
+        FormatColor(request.at("underlayer_color"));
+    
+    render_settings_.underlayer_width =
+        request.at("underlayer_width").AsDouble();
+    
+    const json::Array& color_palette = request.at("color_palette").AsArray();
+    for (const json::Node& color : color_palette)
+    {
+        render_settings_.color_palette.push_back(FormatColor(color));
+    }
+}
+
+void JsonReader::ParseJSON(std::istream& input)
+{
     const json::Document json_data = json::Load(input);
     const json::Dict& requests = json_data.GetRoot().AsMap();
 
     if (requests.count("base_requests"))
     {
-        ParseBaseRequests(requests.at("base_requests"), queue);
+        ParseBaseRequests(requests.at("base_requests"));
     }
 
-    if (requests.count("stat_requests"))
+    // if (requests.count("stat_requests"))
+    // {
+    //     ParseStatRequests(requests.at("stat_requests"));
+    // }
+
+    if (requests.count("render_settings"))
     {
-        ParseStatRequests(requests.at("stat_requests"), queue);
+        ParseRenderSettings(requests.at("render_settings"));
     }
-
-    return queue;
 }
 
-}
-
-void ProcessingStopRequest(TransportCatalogue& catalogue,
+void JsonReader::ProcessingStopRequest(TransportCatalogue& catalogue,
     const domain::StopRequest& request)
 {
     catalogue.AddStop(request.name, {request.lat, request.lng});
 }
 
-void ProcessingDistances(TransportCatalogue& catalogue,
+void JsonReader::ProcessingDistances(TransportCatalogue& catalogue,
     const domain::StopRequest& request)
 {
     if (!request.dists.empty())
@@ -128,7 +226,7 @@ void ProcessingDistances(TransportCatalogue& catalogue,
     }
 }
 
-void ProcessingBusRequest(TransportCatalogue& catalogue,
+void JsonReader::ProcessingBusRequest(TransportCatalogue& catalogue,
     const domain::BusRequest& request)
 {
     std::vector<std::string> stops = request.stops;
@@ -144,32 +242,7 @@ void ProcessingBusRequest(TransportCatalogue& catalogue,
     catalogue.AddBus(request.name, stops);
 }
 
-void ProcessingInput(TransportCatalogue& catalogue,
-    const domain::RequestQueue& queue)
-{
-    if (!queue.stops_requests.empty())
-    {
-        for (const domain::StopRequest& request : queue.stops_requests)
-        {
-            ProcessingStopRequest(catalogue, request);
-        }
-
-        for (const domain::StopRequest& request : queue.stops_requests)
-        {
-            ProcessingDistances(catalogue, request);
-        }
-    }
-
-    if (!queue.buses_requests.empty())
-    {
-        for (const domain::BusRequest& request : queue.buses_requests)
-        {
-            ProcessingBusRequest(catalogue, request);
-        }
-    }
-}
-
-json::Node ComputeStatRequest(TransportCatalogue& catalogue,
+json::Node JsonReader::ComputeStatRequest(TransportCatalogue& catalogue,
     const domain::StatRequest& request)
 {
     json::Dict result;
@@ -219,26 +292,19 @@ json::Node ComputeStatRequest(TransportCatalogue& catalogue,
     return result;
 }
 
-json::Array ComputeJSON(TransportCatalogue& catalogue,
-    const domain::RequestQueue& queue)
+json::Array JsonReader::ComputeJSON(TransportCatalogue& catalogue)
 {
     json::Array result;
 
-    if (!queue.stats_requests.empty())
+    if (!request_queue_.stats_requests.empty())
     {
-        for (const domain::StatRequest& request : queue.stats_requests)
+        for (const domain::StatRequest& request : request_queue_.stats_requests)
         {
             result.push_back(ComputeStatRequest(catalogue, request));
         }
     }
 
     return result;
-}
-
-void ProcessingOutput(TransportCatalogue& catalogue,
-    const domain::RequestQueue& queue, std::ostream& output)
-{
-    json::Print(json::Document{ComputeJSON(catalogue, queue)}, output);
 }
 
 }

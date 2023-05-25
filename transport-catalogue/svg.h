@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <sstream>
 #include <variant>
 #include <vector>
 
@@ -54,23 +55,26 @@ struct ColorPrinter {
 
     std::string operator()(Rgb color) const
     {
-        return "rgb(" + std::to_string(color.red) + "," +
-            std::to_string(color.green) + "," +
-            std::to_string(color.blue) + ")";
+        std::stringstream temp;
+        temp << "rgb(" << static_cast<int>(color.red) << ","
+            << static_cast<int>(color.green) << ","
+            << static_cast<int>(color.blue) << ")";
+
+        std::string result = temp.str();
+
+        return result;
     }
 
     std::string operator()(Rgba color) const
     {
-        std::string opacity = std::to_string(color.opacity);
-        while (opacity.back() == '0' || opacity.back() == '.')
-        {
-            opacity.pop_back();
-        }
+        std::stringstream temp;
+        temp << "rgba(" << static_cast<int>(color.red) << ","
+            << static_cast<int>(color.green) << ","
+            << static_cast<int>(color.blue) << "," << color.opacity << ")";
 
-        return "rgba(" + std::to_string(color.red) + "," +
-            std::to_string(color.green) + "," +
-            std::to_string(color.blue) + "," +
-            opacity + ")";
+        std::string result = temp.str();
+
+        return result;
     }
 };
 

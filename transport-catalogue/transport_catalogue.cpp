@@ -81,6 +81,28 @@ domain::Stop* TransportCatalogue::GetStop(const std::string& name) const
     return stopname_to_stop_.at(name);
 }
 
+domain::Bus* TransportCatalogue::GetBus(const std::string& name) const
+{
+    if (busname_to_bus_.count(name) == 0)
+    {
+        throw std::invalid_argument("Route not found in catalogue");
+    }
+
+    return busname_to_bus_.at(name);
+}
+
+std::map<std::string, domain::Bus*> TransportCatalogue::GetRoutes() const
+{
+    std::map<std::string, domain::Bus*> result;
+
+    for (const domain::Bus& bus : buses_)
+    {
+        result[bus.name] = busname_to_bus_.at(bus.name);
+    }
+
+    return result;
+}
+
 std::set<std::string_view> TransportCatalogue::GetBusesToStop(
     const std::string& stop_name) const
 {
@@ -138,16 +160,6 @@ double TransportCatalogue::ComputeCurvature(const std::string& name) const
     }
 
     return static_cast<double>(length) / raw_length;
-}
-
-domain::Bus* TransportCatalogue::GetBus(const std::string& name) const
-{
-    if (busname_to_bus_.count(name) == 0)
-    {
-        throw std::invalid_argument("Route not found in catalogue");
-    }
-
-    return busname_to_bus_.at(name);
 }
 
 int TransportCatalogue::GetDistance(const std::string& stop_from,

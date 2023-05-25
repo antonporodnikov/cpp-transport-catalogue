@@ -52,6 +52,10 @@ public:
 
     domain::Stop* GetStop(const std::string& name) const;
 
+    domain::Bus* GetBus(const std::string& name) const;
+
+    std::map<std::string, domain::Bus*> GetRoutes() const;
+
     std::set<std::string_view> GetBusesToStop(
         const std::string& stop_name) const;
 
@@ -70,8 +74,6 @@ private:
     BusnameToBus busname_to_bus_;
     StopnameToBuses stopname_to_buses_;
     StopsToDistance stops_to_distance_;
-
-    domain::Bus* GetBus(const std::string& name) const;
 
     int GetDistance(const std::string& stop_from,
         const std::string& stop_to) const;
