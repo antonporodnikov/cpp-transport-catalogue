@@ -8,15 +8,10 @@ int main()
 {
     transport_catalogue::TransportCatalogue catalogue;
 
-    json_reader::JsonReader doc(std::cin);
-    doc.UpdateCatalogue(catalogue);
+    json_reader::JsonReader doc(catalogue, std::cin);
+    doc.UpdateCatalogue();
 
-    const map_renderer::MapRenderer map(doc.GetRenderSettings());
-
-    const request_handler::RequestHandler request(catalogue, map);
-
-    svg::Document test = request.RenderMap();
-    test.Render(std::cout);
+    doc.PrintStat(std::cout);
 
     return 0;
 }

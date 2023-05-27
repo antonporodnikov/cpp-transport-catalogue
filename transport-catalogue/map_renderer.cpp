@@ -173,9 +173,11 @@ void MapRenderer::RenderRouteName(const domain::Bus* route,
     doc.Add(route_name_pad.SetPosition(screen_coords));
     doc.Add(route_name.SetPosition(screen_coords));
 
-    if (!is_round_route)
+    auto first_stop = route->stops.begin();
+    int route_middle_index = (route->stops.size()) / 2;
+    auto last_stop = first_stop + route_middle_index;
+    if ((!is_round_route) && (*first_stop != *last_stop))
     {
-        int route_middle_index = (route->stops.size()) / 2;
         const svg::Point screen_coords_to =
             proj(route->stops.at(route_middle_index)->coords);
         doc.Add(route_name_pad.SetPosition(screen_coords_to));

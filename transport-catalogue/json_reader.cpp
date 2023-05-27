@@ -4,23 +4,24 @@ using namespace std::literals;
 
 namespace json_reader {
 
-JsonReader::JsonReader(std::istream& input)
+JsonReader::JsonReader(TransportCatalogue& catalogue, std::istream& input)
+    : catalogue_(catalogue)
 {
     JsonReader::ParseJSON(input);
 }
 
-void JsonReader::UpdateCatalogue(TransportCatalogue& catalogue)
+void JsonReader::UpdateCatalogue()
 {
     if (!request_queue_.stops_requests.empty())
     {
         for (const domain::StopRequest& request : request_queue_.stops_requests)
         {
-            ProcessingStopRequest(catalogue, request);
+            ProcessingStopRequest(request);
         }
 
         for (const domain::StopRequest& request : request_queue_.stops_requests)
         {
-            ProcessingDistances(catalogue, request);
+            ProcessingDistances(request);
         }
     }
 
@@ -28,14 +29,14 @@ void JsonReader::UpdateCatalogue(TransportCatalogue& catalogue)
     {
         for (const domain::BusRequest& request : request_queue_.buses_requests)
         {
-            ProcessingBusRequest(catalogue, request);
+            ProcessingBusRequest(request);
         }
     }
 }
 
-void JsonReader::PrintStat(TransportCatalogue& catalogue, std::ostream& output)
+void JsonReader::PrintStat(std::ostream& output)
 {
-    json::Print(json::Document{ComputeJSON(catalogue)}, output);
+    json::Print(json::Document{ComputeJSON()}, output);
 }
 
 const domain::RequestQueue& JsonReader::GetRequestQueue() const
@@ -111,9 +112,16 @@ void JsonReader::ParseStatRequest(const json::Node& stat_request)
 
     const int id = request.at("id").AsInt();
     const std::string type = request.at("type").AsString();
-    const std::string name = request.at("name").AsString();
 
-    request_queue_.stats_requests.push_back({id, type, name});
+    if (request.count("name") != 0)
+    {
+        const std::string name = request.at("name").AsString();
+        request_queue_.stats_requests.push_back({id, type, name});
+
+        return;
+    }
+
+    request_queue_.stats_requests.push_back({id, type, ""});
 }
 
 void JsonReader::ParseStatRequests(const json::Node& stat_requests)
@@ -197,10 +205,10 @@ void JsonReader::ParseJSON(std::istream& input)
         ParseBaseRequests(requests.at("base_requests"));
     }
 
-    // if (requests.count("stat_requests"))
-    // {
-    //     ParseStatRequests(requests.at("stat_requests"));
-    // }
+    if (requests.count("stat_requests"))
+    {
+        ParseStatRequests(requests.at("stat_requests"));
+    }
 
     if (requests.count("render_settings"))
     {
@@ -208,26 +216,23 @@ void JsonReader::ParseJSON(std::istream& input)
     }
 }
 
-void JsonReader::ProcessingStopRequest(TransportCatalogue& catalogue,
-    const domain::StopRequest& request)
+void JsonReader::ProcessingStopRequest(const domain::StopRequest& request)
 {
-    catalogue.AddStop(request.name, {request.lat, request.lng});
+    catalogue_.AddStop(request.name, {request.lat, request.lng});
 }
 
-void JsonReader::ProcessingDistances(TransportCatalogue& catalogue,
-    const domain::StopRequest& request)
+void JsonReader::ProcessingDistances(const domain::StopRequest& request)
 {
     if (!request.dists.empty())
     {
         for (const auto& [stop_to, dist] : request.dists)
         {
-            catalogue.AddDistance(request.name, stop_to, dist);
+            catalogue_.AddDistance(request.name, stop_to, dist);
         }
     }
 }
 
-void JsonReader::ProcessingBusRequest(TransportCatalogue& catalogue,
-    const domain::BusRequest& request)
+void JsonReader::ProcessingBusRequest(const domain::BusRequest& request)
 {
     std::vector<std::string> stops = request.stops;
     if (!request.is_round)
@@ -239,11 +244,10 @@ void JsonReader::ProcessingBusRequest(TransportCatalogue& catalogue,
         }
     }
 
-    catalogue.AddBus(request.name, stops);
+    catalogue_.AddBus(request.name, stops);
 }
 
-json::Node JsonReader::ComputeStatRequest(TransportCatalogue& catalogue,
-    const domain::StatRequest& request)
+json::Node JsonReader::ComputeStatRequest(const domain::StatRequest& request)
 {
     json::Dict result;
 
@@ -252,7 +256,7 @@ json::Node JsonReader::ComputeStatRequest(TransportCatalogue& catalogue,
         try
         {
             std::set<std::string_view> buses_to_stop = 
-                catalogue.GetBusesToStop(request.name);
+                catalogue_.GetBusesToStop(request.name);
             json::Array buses;
             
             for (std::string_view bus : buses_to_stop)
@@ -273,14 +277,38 @@ json::Node JsonReader::ComputeStatRequest(TransportCatalogue& catalogue,
         return result;
     }
 
+    if (request.type == "Bus")
+    {
+        try
+        {
+            result["curvature"] = catalogue_.ComputeCurvature(request.name);
+            result["request_id"] = request.id;
+            result["route_length"] = catalogue_.ComputeRouteLength(request.name);
+            result["stop_count"] = catalogue_.ComputeStopsCount(request.name);
+            result["unique_stop_count"] =
+                catalogue_.ComputeUniqueStopsCount(request.name);
+        }
+        catch (const std::invalid_argument&)
+        {
+            result = {};
+            result["request_id"] = request.id;
+            result["error_message"] = "not found"s;
+        }
+
+        return result;
+    }
+
     try
     {
-        result["curvature"] = catalogue.ComputeCurvature(request.name);
+        const map_renderer::MapRenderer renderer(render_settings_);
+        const request_handler::RequestHandler handler(catalogue_, renderer);
+
+        svg::Document map = handler.RenderMap();
+        std::stringstream temp;
+        map.Render(temp);
+
+        result["map"] = temp.str();
         result["request_id"] = request.id;
-        result["route_length"] = catalogue.ComputeRouteLength(request.name);
-        result["stop_count"] = catalogue.ComputeStopsCount(request.name);
-        result["unique_stop_count"] =
-            catalogue.ComputeUniqueStopsCount(request.name);
     }
     catch (const std::invalid_argument&)
     {
@@ -292,7 +320,7 @@ json::Node JsonReader::ComputeStatRequest(TransportCatalogue& catalogue,
     return result;
 }
 
-json::Array JsonReader::ComputeJSON(TransportCatalogue& catalogue)
+json::Array JsonReader::ComputeJSON()
 {
     json::Array result;
 
@@ -300,7 +328,7 @@ json::Array JsonReader::ComputeJSON(TransportCatalogue& catalogue)
     {
         for (const domain::StatRequest& request : request_queue_.stats_requests)
         {
-            result.push_back(ComputeStatRequest(catalogue, request));
+            result.push_back(ComputeStatRequest(request));
         }
     }
 

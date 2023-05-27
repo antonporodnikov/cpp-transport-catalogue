@@ -6,6 +6,7 @@
 #include "transport_catalogue.h"
 
 #include <istream>
+// #include <sstream>
 
 using transport_catalogue::TransportCatalogue;
 
@@ -13,17 +14,18 @@ namespace json_reader {
 
 class JsonReader {
 public:
-    explicit JsonReader(std::istream& input);
+    explicit JsonReader(TransportCatalogue& catalogue, std::istream& input);
 
-    void UpdateCatalogue(TransportCatalogue& catalogue);
+    void UpdateCatalogue();
 
-    void PrintStat(TransportCatalogue& catalogue, std::ostream& output);
+    void PrintStat(std::ostream& output);
 
     const domain::RequestQueue& GetRequestQueue() const;
 
     map_renderer::RenderSettingsRequest GetRenderSettings() const;
 
 private:
+    TransportCatalogue& catalogue_;
     domain::RequestQueue request_queue_;
     map_renderer::RenderSettingsRequest render_settings_; 
 
@@ -43,19 +45,15 @@ private:
 
     void ParseJSON(std::istream& input);
 
-    void ProcessingStopRequest(TransportCatalogue& catalogue,
-        const domain::StopRequest& request);
+    void ProcessingStopRequest(const domain::StopRequest& request);
 
-    void ProcessingDistances(TransportCatalogue& catalogue,
-        const domain::StopRequest& request);
+    void ProcessingDistances(const domain::StopRequest& request);
 
-    void ProcessingBusRequest(TransportCatalogue& catalogue,
-        const domain::BusRequest& request);
+    void ProcessingBusRequest(const domain::BusRequest& request);
 
-    json::Node ComputeStatRequest(TransportCatalogue& catalogue,
-        const domain::StatRequest& request);
+    json::Node ComputeStatRequest(const domain::StatRequest& request);
 
-    json::Array ComputeJSON(TransportCatalogue& catalogue);
+    json::Array ComputeJSON();
 };
 
 }
