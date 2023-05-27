@@ -9,6 +9,12 @@ bool IsZero(double value)
     return std::abs(value) < EPSILON;
 }
 
+svg::Point SphereProjector::operator()(geo::Coordinates coords) const
+{
+    return {(coords.lng - min_lon_) * zoom_coeff_ + padding_,
+        (max_lat_ - coords.lat) * zoom_coeff_ + padding_};
+}
+
 ColorPalettePicker::ColorPalettePicker(
     const std::vector<svg::Color>& color_palette)
     : color_palette_(color_palette), color_palette_size_(color_palette.size())

@@ -82,7 +82,6 @@ void Circle::RenderObject(const RenderContext& context) const
     out << "<circle cx=\""sv << center_.x << "\" cy=\""sv << center_.y
         << "\" "sv;
     out << "r=\""sv << radius_ << "\""sv;
-    // Выводим атрибуты, унаследованные от PathProps
     RenderAttrs(context.out);
     out << "/>"sv;
 }
@@ -217,7 +216,7 @@ void Document::Render(std::ostream& out) const
         obj->Render(ctx);
     }
 
-    out << "</svg>"sv;
+    out << "</svg>"sv << std::endl;
 }
 
-}  // namespace svg
+}

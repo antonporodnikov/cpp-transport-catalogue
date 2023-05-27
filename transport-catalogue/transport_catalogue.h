@@ -12,7 +12,17 @@ namespace transport_catalogue {
 namespace hashers {
 
 struct StringViewHasher {
-    std::size_t operator()(const std::string_view name) const;
+    std::size_t operator()(const std::string_view name) const
+    {
+        const int SHIFT = 27;
+
+        const int mult = name.size() + SHIFT;
+        const auto letter_it = name.begin();
+        std::size_t first = hasher_(*letter_it) * mult; 
+        std::size_t second = hasher_(*letter_it + mult) * (mult * mult); 
+
+        return (first + second) * (mult * mult * mult);
+    }
 
 private:
     std::hash<char> hasher_;
@@ -20,7 +30,15 @@ private:
 
 struct StopPtrsHasher {
     std::size_t operator()(const std::pair<
-        domain::Stop*, domain::Stop*> stops) const;
+        domain::Stop*, domain::Stop*> stops) const
+    {
+        const int MULT = 54;
+
+        std::size_t first = (hasher_(stops.first)) * MULT;
+        std::size_t second = (hasher_(stops.second)) * (MULT * MULT);
+
+        return (first + second) * (MULT * MULT * MULT);
+    }
 
 private:
     std::hash<domain::Stop*> hasher_;

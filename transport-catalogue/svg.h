@@ -1,4 +1,3 @@
-// REMAKE MODULE
 #pragma once
 
 #include <cstdint>
@@ -305,4 +304,4 @@ public:
     virtual void Draw(ObjectContainer& container) const = 0;
 };
 
-}  // namespace svg
+}

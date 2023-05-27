@@ -2,33 +2,6 @@
 
 namespace transport_catalogue {
 
-namespace hashers {
-
-std::size_t StringViewHasher::operator()(const std::string_view name) const
-{
-    const int SHIFT = 27;
-
-    const int mult = name.size() + SHIFT;
-    const auto letter_it = name.begin();
-    std::size_t first = hasher_(*letter_it) * mult; 
-    std::size_t second = hasher_(*letter_it + mult) * (mult * mult); 
-
-    return (first + second) * (mult * mult * mult);
-}
-
-std::size_t StopPtrsHasher::operator()(const std::pair<
-    domain::Stop*, domain::Stop*> stops) const
-{
-    const int MULT = 54;
-
-    std::size_t first = (hasher_(stops.first)) * MULT;
-    std::size_t second = (hasher_(stops.second)) * (MULT * MULT);
-
-    return (first + second) * (MULT * MULT * MULT);
-}
-
-}
-
 void TransportCatalogue::AddStop(const std::string& name,
     const geo::Coordinates& coords)
 {

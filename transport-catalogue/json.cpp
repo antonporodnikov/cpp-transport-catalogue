@@ -107,7 +107,6 @@ Number ProcessNumber(std::istream& input)
             }
             catch (...)
             {
-                // pass
             }
         }
 
@@ -327,7 +326,7 @@ Node LoadNode(istream& input)
     }
 }
 
-}  // namespace
+}
 
 Node::Node() : value_(nullptr) {}
 
@@ -641,4 +640,4 @@ void Print(const Document& doc, std::ostream& output)
     PrintNode(doc.GetRoot(), output);
 }
 
-}  // namespace json
+}

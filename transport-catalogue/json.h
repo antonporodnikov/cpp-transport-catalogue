@@ -1,4 +1,3 @@
-// REWORK MODULE
 #pragma once
 
 #include <iostream>
@@ -93,4 +92,4 @@ void PrintNode(const Node& node, std::ostream& out);
 
 void Print(const Document& doc, std::ostream& output);
 
-}  // namespace json
+}

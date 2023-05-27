@@ -183,13 +183,13 @@ RequestQueue ParseInput(std::istream& input)
         if (details::IsStop(request.substr(0, colon)))
         {
             details::CutLabel(request, "Stop");
-            queue.StopsQueue.push_back(std::move(request));
+            queue.stops_queue.push_back(std::move(request));
 
             continue;
         }
 
         details::CutLabel(request, "Bus");
-        queue.BusesQueue.push_back(std::move(request));
+        queue.buses_queue.push_back(std::move(request));
     }
 
     return queue;
@@ -244,21 +244,21 @@ void ProcessingInput(TransportCatalogue& catalogue, std::istream& input)
 {
     RequestQueue queue = parsers::ParseInput(input);
 
-    for (std::string& request : queue.StopsQueue)
+    for (std::string& request : queue.stops_queue)
     {
         const auto stop_data = parsers::ParseStopRequest(request);
 
         catalogue.AddStop(stop_data.first, stop_data.second);
     }
 
-    for (std::string& request : queue.BusesQueue)
+    for (std::string& request : queue.buses_queue)
     {
         const auto bus_data = parsers::ParseBusRequest(request);
 
         catalogue.AddBus(bus_data.first, bus_data.second);
     }
 
-    for (std::string& request : queue.StopsQueue)
+    for (std::string& request : queue.stops_queue)
     {
         parsers::ParseDistanceRequest(catalogue, request);
     }

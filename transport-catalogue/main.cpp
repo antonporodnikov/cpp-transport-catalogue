@@ -1,8 +1,5 @@
 #include "json_reader.h"
-#include "map_renderer.h"
 #include "request_handler.h"
-
-#include <sstream>  // FOR TESTS
 
 int main()
 {
@@ -10,7 +7,6 @@ int main()
 
     json_reader::JsonReader doc(catalogue, std::cin);
     doc.UpdateCatalogue();
-
     doc.PrintStat(std::cout);
 
     return 0;
