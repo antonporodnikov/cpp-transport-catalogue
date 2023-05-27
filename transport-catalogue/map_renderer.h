@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <optional>
+#include <set>
 
 namespace map_renderer {
 
@@ -124,6 +125,18 @@ private:
     void RenderRoute(const domain::Bus* route,
         const details::SphereProjector& proj, const svg::Color& color,
         svg::Document& doc) const;
+    
+    bool IsRoundRoute(const domain::Bus* route) const;
+
+    void RenderRouteName(const domain::Bus* route,
+        const details::SphereProjector& proj, const svg::Color& color,
+        svg::Document& doc) const;
+
+    void RenderStopsPoints(const std::vector<domain::Stop*> stops,
+        const details::SphereProjector& proj, svg::Document& doc) const;
+
+    void RenderStopsNames(const std::vector<domain::Stop*> stops,
+        const details::SphereProjector& proj, svg::Document& doc) const;
 };
 
 }
