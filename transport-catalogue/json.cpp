@@ -33,13 +33,13 @@ Node LoadArray(istream& input)
     }
 }
 
-using Number = std::variant<int, double>;
+using Number = variant<int, double>;
 
-Number ProcessNumber(std::istream& input)
+Number ProcessNumber(istream& input)
 {
-    using namespace std::literals;
+    using namespace literals;
 
-    std::string parsed_num;
+    string parsed_num;
 
     auto read_char = [&parsed_num, &input]
     {
@@ -52,12 +52,12 @@ Number ProcessNumber(std::istream& input)
 
     auto read_digits = [&input, read_char]
     {
-        if (!std::isdigit(input.peek()))
+        if (!isdigit(input.peek()))
         {
             throw ParsingError("A digit is expected"s);
         }
 
-        while (std::isdigit(input.peek()))
+        while (isdigit(input.peek()))
         {
             read_char();
         }
@@ -103,14 +103,14 @@ Number ProcessNumber(std::istream& input)
         {
             try
             {
-                return std::stoi(parsed_num);
+                return stoi(parsed_num);
             }
             catch (...)
             {
             }
         }
 
-        return std::stod(parsed_num);
+        return stod(parsed_num);
     }
     catch (...)
     {
@@ -130,13 +130,13 @@ Node LoadNumber(istream& input)
     return Node(get<double>(num));
 }
 
-std::string ProcessString(std::istream& input)
+string ProcessString(istream& input)
 {
-    using namespace std::literals;
+    using namespace literals;
     
-    auto it = std::istreambuf_iterator<char>(input);
-    auto end = std::istreambuf_iterator<char>();
-    std::string s;
+    auto it = istreambuf_iterator<char>(input);
+    auto end = istreambuf_iterator<char>();
+    string s;
     while (true)
     {
         if (it == end)
@@ -229,7 +229,7 @@ Node LoadDict(istream& input)
 
 Node LoadNull(istream& input)
 {
-    std::string check;
+    string check;
 
     char c;
     for (int i = 0; i < 2; ++i)
@@ -255,7 +255,7 @@ Node LoadNull(istream& input)
 
 Node LoadBool(istream& input)
 {
-    std::string check;
+    string check;
 
     int i = 0;
     char c;
@@ -315,7 +315,7 @@ Node LoadNode(istream& input)
     {
         return LoadBool(input);
     }
-    else if (std::isdigit(c) || c == '-')
+    else if (isdigit(c) || c == '-')
     {
         input.putback(c);
         return LoadNumber(input);
@@ -328,27 +328,11 @@ Node LoadNode(istream& input)
 
 }
 
-Node::Node() : value_(nullptr) {}
-
-Node::Node(int value) : value_(value) {}
-
-Node::Node(double value) : value_(value) {}
-
-Node::Node(bool value) : value_(value) {}
-
-Node::Node(string value) : value_(move(value)) {}
-
-Node::Node(std::nullptr_t) : value_(nullptr) {}
-    
-Node::Node(Array array) : value_(move(array)) {}
-
-Node::Node(Dict map) : value_(move(map)) {}
-
 int Node::AsInt() const
 {
     try
     {
-        return get<int>(value_);
+        return get<int>(*this);
     }
     catch (const bad_variant_access& e)
     {
@@ -360,7 +344,7 @@ bool Node::AsBool() const
 {
     try
     {
-        return get<bool>(value_);
+        return get<bool>(*this);
     }
     catch (const bad_variant_access& e)
     {
@@ -372,8 +356,8 @@ double Node::AsDouble() const
 {
     try
     {
-        return holds_alternative<double>(value_) ? get<double>(value_) :
-            static_cast<double>(get<int>(value_));
+        return holds_alternative<double>(*this) ? get<double>(*this) :
+            static_cast<double>(get<int>(*this));
     }
     catch (const bad_variant_access& e)
     {
@@ -385,7 +369,7 @@ const string& Node::AsString() const
 {
     try
     {
-        return get<string>(value_);
+        return get<string>(*this);
     }
     catch (const bad_variant_access& e)
     {
@@ -397,7 +381,7 @@ const Array& Node::AsArray() const
 {
     try
     {
-        return get<Array>(value_);
+        return get<Array>(*this);
     }
     catch (const bad_variant_access& e)
     {
@@ -409,7 +393,7 @@ const Dict& Node::AsMap() const
 {
     try
     {
-        return get<Dict>(value_);
+        return get<Dict>(*this);
     }
     catch (const bad_variant_access& e)
     {
@@ -419,7 +403,7 @@ const Dict& Node::AsMap() const
 
 bool Node::IsInt() const
 {
-    if (holds_alternative<int>(value_))
+    if (holds_alternative<int>(*this))
     {
         return true;
     }
@@ -429,7 +413,7 @@ bool Node::IsInt() const
 
 bool Node::IsDouble() const
 {
-    if (holds_alternative<int>(value_) || holds_alternative<double>(value_))
+    if (holds_alternative<int>(*this) || holds_alternative<double>(*this))
     {
         return true;
     }
@@ -439,7 +423,7 @@ bool Node::IsDouble() const
 
 bool Node::IsPureDouble() const
 {
-    if (holds_alternative<double>(value_))
+    if (holds_alternative<double>(*this))
     {
         return true;
     }
@@ -449,7 +433,7 @@ bool Node::IsPureDouble() const
 
 bool Node::IsBool() const
 {
-    if (holds_alternative<bool>(value_))
+    if (holds_alternative<bool>(*this))
     {
         return true;
     }
@@ -459,7 +443,7 @@ bool Node::IsBool() const
 
 bool Node::IsString() const
 {
-    if (holds_alternative<std::string>(value_))
+    if (holds_alternative<string>(*this))
     {
         return true;
     }
@@ -469,7 +453,7 @@ bool Node::IsString() const
 
 bool Node::IsNull() const
 {
-    if (holds_alternative<nullptr_t>(value_))
+    if (holds_alternative<nullptr_t>(*this))
     {
         return true;
     }
@@ -479,7 +463,7 @@ bool Node::IsNull() const
 
 bool Node::IsArray() const
 {
-    if (holds_alternative<Array>(value_))
+    if (holds_alternative<Array>(*this))
     {
         return true;
     }
@@ -489,7 +473,7 @@ bool Node::IsArray() const
 
 bool Node::IsMap() const
 {
-    if (holds_alternative<Dict>(value_))
+    if (holds_alternative<Dict>(*this))
     {
         return true;
     }
@@ -497,14 +481,14 @@ bool Node::IsMap() const
     return false;
 }
 
-const Node::Value& Node::GetValue() const
+const Value& Node::GetValue() const
 {
-    return value_;
+    return *this;
 }
 
 bool Node::operator==(const Node& rhs) const
 {
-    return this->value_ == rhs.value_;
+    return this->GetValue() == rhs.GetValue();
 }
 
 bool Node::operator!=(const Node& rhs) const
@@ -534,108 +518,15 @@ Document Load(istream& input)
     return Document{LoadNode(input)};
 }
 
-void PrintValue(bool value, std::ostream& out)
+void PrintNode(const Node& node, ostream& out)
 {
-    if (value)
-    {
-        out << "true"sv;
-        return;
-    }
+    ostringstream strm;
 
-    out << "false"sv;
-}
-
-void PrintValue(const string& value, std::ostream& out)
-{
-    string result;
-    result.push_back('\"');
-
-    for (char c : value)
-    {
-        if (c == '\\' || c == '\"' || c == '\'')
-        {
-            result.push_back('\\');
-            result.push_back(c);
-
-            continue;
-        }
-
-        if (c == '\r')
-        {
-            result.push_back('\\');
-            result.push_back('r');
-
-            continue;
-        }
-
-        if (c == '\n')
-        {
-            result.push_back('\\');
-            result.push_back('n');
-
-            continue;
-        }
-
-        result.push_back(c);
-    }
-
-    result.push_back('\"');
-
-    out << result;
-}
-
-void PrintValue(std::nullptr_t, std::ostream& out)
-{
-    out << "null"sv;
-}
-
-void PrintValue(const Array& value, std::ostream& out)
-{
-    out << '[';
-
-    for (auto it = value.begin(); it != value.end(); ++it)
-    {
-        if (it == value.begin())
-        {
-            PrintNode(*it, out);
-            continue;
-        }
-
-        out << ", "sv;
-        PrintNode(*it, out);
-    }
-
-    out << ']';
-}
-
-void PrintValue(const Dict& value, std::ostream& out)
-{
-    out << '{';
-
-    for (auto it = value.begin(); it != value.end(); ++it)
-    {
-        if (it == value.begin())
-        {
-            out << '\"' << (*it).first << "\": "sv;
-            PrintNode((*it).second, out);
-            continue;
-        }
-
-        out << ", "sv;
-        out << '\"' << (*it).first << "\": "sv;
-        PrintNode((*it).second, out);
-    }
-
-    out << '}';
-}
-
-void PrintNode(const Node& node, std::ostream& out)
-{
-    std::visit([&out](const auto& value) { PrintValue(value, out); },
-        node.GetValue());
+    visit(PrintValue{strm}, node.GetValue());
+    out << strm.str();
 } 
 
-void Print(const Document& doc, std::ostream& output)
+void Print(const Document& doc, ostream& output)
 {
     PrintNode(doc.GetRoot(), output);
 }

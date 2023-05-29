@@ -136,25 +136,38 @@ void JsonReader::ParseStatRequests(const json::Node& stat_requests)
 
 svg::Color JsonReader::FormatColor(const json::Node& color)
 {
-    if (color.IsString())
+    try
     {
-        return color.AsString();
+        if (color.IsString())
+        {
+            return color.AsString();
+        }
+        
+        json::Array color_arr = color.AsArray();
+        if (color_arr.size() == 4)
+        {
+            svg::Rgba color_rgba{color_arr.at(0).AsInt(),
+                color_arr.at(1).AsInt(), color_arr.at(2).AsInt(),
+                color_arr.at(3).AsDouble()};
+
+            return color_rgba;
+        }
+
+
+        if (color_arr.size() == 3)
+        {
+            svg::Rgb color_rgb{color_arr.at(0).AsInt(), color_arr.at(1).AsInt(),
+                color_arr.at(2).AsInt()};
+            
+            return color_rgb;
+        }
     }
-    
-    json::Array color_arr = color.AsArray();
-    if (color_arr.size() == 4)
+    catch (const std::invalid_argument&)
     {
-        svg::Rgba color_rgba{color_arr.at(0).AsInt(), color_arr.at(1).AsInt(),
-            color_arr.at(2).AsInt(), color_arr.at(3).AsDouble()};
-
-        return color_rgba;
+        std::cout << "Unsupported color format" << std::endl;
     }
 
-
-    svg::Rgb color_rgb{color_arr.at(0).AsInt(), color_arr.at(1).AsInt(),
-        color_arr.at(2).AsInt()};
-    
-    return color_rgb;
+    return std::monostate{};
 }
 
 void JsonReader::ParseRenderSettings(const json::Node& render_settings)

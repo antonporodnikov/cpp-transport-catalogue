@@ -3,8 +3,11 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <sstream>
 #include <variant>
 #include <vector>
+
+using namespace std::literals;
 
 namespace json {
 
@@ -12,25 +15,17 @@ class Node;
 
 using Dict = std::map<std::string, Node>;
 using Array = std::vector<Node>;
+using Value = std::variant<std::nullptr_t, Array, Dict, bool, int, double, 
+        std::string>;
 
 class ParsingError : public std::runtime_error {
 public:
     using runtime_error::runtime_error;
 };
 
-class Node {
+class Node final : private Value {
 public:
-    using Value = std::variant<std::nullptr_t, Array, Dict, bool, int, double,
-        std::string>;
-
-    Node();
-    Node(int value);
-    Node(double value);
-    Node(bool value);
-    Node(std::string value);
-    Node(std::nullptr_t null);
-    Node(Array array);
-    Node(Dict map);
+    using variant::variant;
 
     int AsInt() const;
     bool AsBool() const;
@@ -52,9 +47,6 @@ public:
 
     bool operator==(const Node& rhs) const;
     bool operator!=(const Node& rhs) const;
-
-private:
-    Value value_;
 };
 
 class Document {
@@ -72,23 +64,112 @@ private:
 
 Document Load(std::istream& input);
 
-template <typename Value>
-void PrintValue(const Value& value, std::ostream& out)
-{
-    out << value;
-}
-
-void PrintValue(bool value, std::ostream& out);
-
-void PrintValue(const std::string& value, std::ostream& out);
-
-void PrintValue(std::nullptr_t, std::ostream& out);
-
-void PrintValue(const Array& value, std::ostream& out);
-
-void PrintValue(const Dict& value, std::ostream& out);
-
 void PrintNode(const Node& node, std::ostream& out);
+
+struct PrintValue {
+    std::ostream& out;
+
+    template <typename T>
+    void operator()(const T& value) const
+    {
+        out << value;
+    }
+
+    void operator()(std::nullptr_t) const
+    {
+        out << "null"sv;
+    }
+
+    void operator()(const Array& value) const
+    {
+        out << '[';
+
+        for (auto it = value.begin(); it != value.end(); ++it)
+        {
+            if (it == value.begin())
+            {
+                PrintNode(*it, out);
+                continue;
+            }
+
+            out << ", "sv;
+            PrintNode(*it, out);
+        }
+
+        out << ']';
+    }
+
+    void operator()(const Dict& value) const
+    {
+        out << '{';
+
+        for (auto it = value.begin(); it != value.end(); ++it)
+        {
+            if (it == value.begin())
+            {
+                out << '\"' << (*it).first << "\": "sv;
+                PrintNode((*it).second, out);
+                continue;
+            }
+
+            out << ", "sv;
+            out << '\"' << (*it).first << "\": "sv;
+            PrintNode((*it).second, out);
+        }
+
+        out << '}';
+    }
+
+    void operator()(const bool value) const
+    {
+        if (value)
+        {
+            out << "true"sv;
+            return;
+        }
+
+        out << "false"sv;
+    }
+
+    void operator()(const std::string& value) const
+    {
+        std::string result;
+        result.push_back('\"');
+
+        for (char c : value)
+        {
+            if (c == '\\' || c == '\"' || c == '\'')
+            {
+                result.push_back('\\');
+                result.push_back(c);
+
+                continue;
+            }
+
+            if (c == '\r')
+            {
+                result.push_back('\\');
+                result.push_back('r');
+
+                continue;
+            }
+
+            if (c == '\n')
+            {
+                result.push_back('\\');
+                result.push_back('n');
+
+                continue;
+            }
+
+            result.push_back(c);
+        }
+
+        result.push_back('\"');
+
+        out << result;
+    }
+};
 
 void Print(const Document& doc, std::ostream& output);
 
