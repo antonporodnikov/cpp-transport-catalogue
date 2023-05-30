@@ -526,6 +526,101 @@ void PrintNode(const Node& node, ostream& out)
     out << strm.str();
 } 
 
+void PrintValue::operator()(nullptr_t) const
+{
+    out << "null"sv;
+}
+
+void PrintValue::operator()(const Array& value) const
+{
+    out << '[';
+
+    for (auto it = value.begin(); it != value.end(); ++it)
+    {
+        if (it == value.begin())
+        {
+            PrintNode(*it, out);
+            continue;
+        }
+
+        out << ", "sv;
+        PrintNode(*it, out);
+    }
+
+    out << ']';
+}
+
+void PrintValue::operator()(const Dict& value) const
+{
+    out << '{';
+
+    for (auto it = value.begin(); it != value.end(); ++it)
+    {
+        if (it == value.begin())
+        {
+            out << '\"' << (*it).first << "\": "sv;
+            PrintNode((*it).second, out);
+            continue;
+        }
+
+        out << ", "sv;
+        out << '\"' << (*it).first << "\": "sv;
+        PrintNode((*it).second, out);
+    }
+
+    out << '}';
+}
+
+void PrintValue::operator()(const bool value) const
+{
+    if (value)
+    {
+        out << "true"sv;
+        return;
+    }
+
+    out << "false"sv;
+}
+
+void PrintValue::operator()(const string& value) const
+{
+    string result;
+    result.push_back('\"');
+
+    for (char c : value)
+    {
+        if (c == '\\' || c == '\"' || c == '\'')
+        {
+            result.push_back('\\');
+            result.push_back(c);
+
+            continue;
+        }
+
+        if (c == '\r')
+        {
+            result.push_back('\\');
+            result.push_back('r');
+
+            continue;
+        }
+
+        if (c == '\n')
+        {
+            result.push_back('\\');
+            result.push_back('n');
+
+            continue;
+        }
+
+        result.push_back(c);
+    }
+
+    result.push_back('\"');
+
+    out << result;
+}
+
 void Print(const Document& doc, ostream& output)
 {
     PrintNode(doc.GetRoot(), output);
