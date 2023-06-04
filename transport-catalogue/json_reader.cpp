@@ -51,7 +51,7 @@ map_renderer::RenderSettingsRequest JsonReader::GetRenderSettings() const
 
 void JsonReader::ParseStopRequest(const json::Node& stop_request)
 {
-    const json::Dict& request = stop_request.AsMap();
+    const json::Dict& request = stop_request.AsDict();
 
     const std::string name = request.at("name").AsString();
     const double lat = request.at("latitude").AsDouble();
@@ -61,7 +61,7 @@ void JsonReader::ParseStopRequest(const json::Node& stop_request)
     if (request.count("road_distances"))
     {
         for (const auto& [stop, dist] : 
-            request.at("road_distances").AsMap())
+            request.at("road_distances").AsDict())
         {
             dists[stop] = dist.AsInt();
         }
@@ -72,7 +72,7 @@ void JsonReader::ParseStopRequest(const json::Node& stop_request)
             
 void JsonReader::ParseBusRequest(const json::Node& bus_request)
 {
-    const json::Dict& request = bus_request.AsMap();
+    const json::Dict& request = bus_request.AsDict();
 
     const std::string name = request.at("name").AsString();
     const bool is_round = request.at("is_roundtrip").AsBool();
@@ -92,13 +92,13 @@ void JsonReader::ParseBaseRequests(const json::Node& base_requests)
 
     for (const json::Node& request : requests)
     {
-        if (request.AsMap().at("type").AsString() == "Stop")
+        if (request.AsDict().at("type").AsString() == "Stop")
         {
             ParseStopRequest(request);
             continue;
         }
 
-        if (request.AsMap().at("type").AsString() == "Bus")
+        if (request.AsDict().at("type").AsString() == "Bus")
         {
             ParseBusRequest(request);
             continue;
@@ -108,7 +108,7 @@ void JsonReader::ParseBaseRequests(const json::Node& base_requests)
 
 void JsonReader::ParseStatRequest(const json::Node& stat_request)
 {
-    const json::Dict& request = stat_request.AsMap();
+    const json::Dict& request = stat_request.AsDict();
 
     const int id = request.at("id").AsInt();
     const std::string type = request.at("type").AsString();
@@ -172,7 +172,7 @@ svg::Color JsonReader::FormatColor(const json::Node& color)
 
 void JsonReader::ParseRenderSettings(const json::Node& render_settings)
 {
-    const json::Dict& request = render_settings.AsMap();
+    const json::Dict& request = render_settings.AsDict();
 
     render_settings_.width = request.at("width").AsDouble();
     render_settings_.height = request.at("height").AsDouble();
@@ -211,7 +211,7 @@ void JsonReader::ParseRenderSettings(const json::Node& render_settings)
 void JsonReader::ParseJSON(std::istream& input)
 {
     const json::Document json_data = json::Load(input);
-    const json::Dict& requests = json_data.GetRoot().AsMap();
+    const json::Dict& requests = json_data.GetRoot().AsDict();
 
     if (requests.count("base_requests"))
     {
