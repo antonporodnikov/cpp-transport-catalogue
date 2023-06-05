@@ -63,7 +63,7 @@ public:
     void AddStop(const std::string& name, const geo::Coordinates& coords);
 
     void AddBus(const std::string& name,
-        const std::vector<std::string>& stops);
+        const std::vector<std::string>& stops, const bool is_round);
     
     void AddDistance(const std::string& stop_from, const std::string& stop_to,
         int distance);

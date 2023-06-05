@@ -122,8 +122,6 @@ private:
         const details::SphereProjector& proj, const svg::Color& color,
         svg::Document& doc) const;
     
-    bool IsRoundRoute(const domain::Bus* route) const;
-
     void RenderRouteName(const domain::Bus* route,
         const details::SphereProjector& proj, const svg::Color& color,
         svg::Document& doc) const;

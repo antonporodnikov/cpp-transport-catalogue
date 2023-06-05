@@ -257,7 +257,7 @@ void JsonReader::ProcessingBusRequest(const domain::BusRequest& request)
         }
     }
 
-    catalogue_.AddBus(request.name, stops);
+    catalogue_.AddBus(request.name, stops, request.is_round);
 }
 
 void JsonReader::ComputeStatRequest(json::Builder& builder,

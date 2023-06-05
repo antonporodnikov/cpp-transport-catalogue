@@ -132,26 +132,11 @@ void MapRenderer::RenderRoute(const domain::Bus* route,
     doc.Add(std::move(route_line));
 }
 
-bool MapRenderer::IsRoundRoute(const domain::Bus* route) const
-{
-    auto route_start = route->stops.begin();
-    auto route_end = std::next(route->stops.end(), -1);
-    for (; route_start != route_end; ++route_start, --route_end)
-    {
-        if (*route_start != *route_end)
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 void MapRenderer::RenderRouteName(const domain::Bus* route,
     const details::SphereProjector& proj, const svg::Color& color,
     svg::Document& doc) const
 {
-    const bool is_round_route = IsRoundRoute(route);
+    const bool is_round_route = route->is_round;
 
     svg::Text route_name_pad;
     route_name_pad.SetOffset({render_settings_.bus_label_offset.first,

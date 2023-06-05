@@ -16,7 +16,7 @@ void TransportCatalogue::AddStop(const std::string& name,
 }
 
 void TransportCatalogue::AddBus(const std::string& name,
-    const std::vector<std::string>& stops)
+    const std::vector<std::string>& stops, const bool is_round)
 {
     std::vector<domain::Stop*> stops_ptr;
     stops_ptr.reserve(stops.size());
@@ -25,7 +25,7 @@ void TransportCatalogue::AddBus(const std::string& name,
         stops_ptr.push_back(GetStop(stop));
     }
 
-    buses_.push_back({name, stops_ptr});
+    buses_.push_back({name, stops_ptr, is_round});
 
     const auto it = std::next(buses_.end(), -1);
     std::string_view name_strv = it->name;
