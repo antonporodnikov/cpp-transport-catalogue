@@ -1,6 +1,6 @@
 #pragma once
 
-#include "json.h"
+#include "json_builder.h"
 #include "map_renderer.h"
 #include "request_handler.h"
 #include "transport_catalogue.h"
@@ -50,9 +50,10 @@ private:
 
     void ProcessingBusRequest(const domain::BusRequest& request);
 
-    json::Node ComputeStatRequest(const domain::StatRequest& request);
+    void ComputeStatRequest(json::Builder& builder,
+        const domain::StatRequest& request);
 
-    json::Array ComputeJSON();
+    json::Node ComputeJSON();
 };
 
 }

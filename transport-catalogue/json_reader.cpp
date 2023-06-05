@@ -260,92 +260,91 @@ void JsonReader::ProcessingBusRequest(const domain::BusRequest& request)
     catalogue_.AddBus(request.name, stops);
 }
 
-json::Node JsonReader::ComputeStatRequest(const domain::StatRequest& request)
+void JsonReader::ComputeStatRequest(json::Builder& builder,
+    const domain::StatRequest& request)
 {
-    json::Dict result;
-
     if (request.type == "Stop")
     {
         try
         {
             std::set<std::string_view> buses_to_stop = 
                 catalogue_.GetBusesToStop(request.name);
-            json::Array buses;
-            
+
+            builder.StartDict().Key("buses"s).StartArray();
             for (std::string_view bus : buses_to_stop)
             {
                 std::string bus_name(bus); 
-                buses.push_back(bus_name);
+                builder.Value(bus_name);
             }
 
-            result["buses"] = buses;
-            result["request_id"] = request.id;
+            builder.EndArray().Key("request_id"s).Value(request.id).EndDict();
         }
         catch (const std::invalid_argument&)
         {
-            result["request_id"] = request.id;
-            result["error_message"] = "not found"s;
+            builder.StartDict().Key("request_id"s).Value(request.id)
+                .Key("error_message"s).Value("not found"s).EndDict();
         }
-
-        return result;
     }
-
-    if (request.type == "Bus")
+    else if (request.type == "Bus")
     {
         try
         {
-            result["curvature"] = catalogue_.ComputeCurvature(request.name);
-            result["request_id"] = request.id;
-            result["route_length"] = catalogue_.ComputeRouteLength(request.name);
-            result["stop_count"] = catalogue_.ComputeStopsCount(request.name);
-            result["unique_stop_count"] =
+            const double curvature = catalogue_.ComputeCurvature(request.name);
+            const int request_id = request.id;
+            const double route_length =
+                catalogue_.ComputeRouteLength(request.name);
+            const int stop_count = catalogue_.ComputeStopsCount(request.name);
+            const int unique_stop_count =
                 catalogue_.ComputeUniqueStopsCount(request.name);
+
+            builder.StartDict().Key("curvature"s).Value(curvature)
+                .Key("request_id"s).Value(request_id)
+                .Key("route_length"s).Value(route_length)
+                .Key("stop_count"s).Value(stop_count)
+                .Key("unique_stop_count"s).Value(unique_stop_count).EndDict();
         }
         catch (const std::invalid_argument&)
         {
-            result = {};
-            result["request_id"] = request.id;
-            result["error_message"] = "not found"s;
+            builder.StartDict().Key("request_id"s).Value(request.id)
+                .Key("error_message"s).Value("not found"s).EndDict();
         }
-
-        return result;
     }
-
-    try
+    else if (request.type == "Map")
     {
-        const map_renderer::MapRenderer renderer(render_settings_);
-        const request_handler::RequestHandler handler(catalogue_, renderer);
+        try
+        {
+            const map_renderer::MapRenderer renderer(render_settings_);
+            const request_handler::RequestHandler handler(catalogue_, renderer);
 
-        svg::Document map = handler.RenderMap();
-        std::stringstream temp;
-        map.Render(temp);
+            svg::Document map = handler.RenderMap();
+            std::stringstream temp;
+            map.Render(temp);
 
-        result["map"] = temp.str();
-        result["request_id"] = request.id;
+            builder.StartDict().Key("map"s).Value(temp.str())
+                .Key("request_id"s).Value(request.id).EndDict();
+        }
+        catch (const std::invalid_argument&)
+        {
+            builder.StartDict().Key("request_id"s).Value(request.id)
+                .Key("error_message"s).Value("not found"s).EndDict();
+        }
     }
-    catch (const std::invalid_argument&)
-    {
-        result = {};
-        result["request_id"] = request.id;
-        result["error_message"] = "not found"s;
-    }
-
-    return result;
 }
 
-json::Array JsonReader::ComputeJSON()
+json::Node JsonReader::ComputeJSON()
 {
-    json::Array result;
+    json::Builder result;
+    result.StartArray();
 
     if (!request_queue_.stats_requests.empty())
     {
         for (const domain::StatRequest& request : request_queue_.stats_requests)
         {
-            result.push_back(ComputeStatRequest(request));
+            ComputeStatRequest(result, request);
         }
     }
 
-    return result;
+    return result.EndArray().Build();
 }
 
 }
