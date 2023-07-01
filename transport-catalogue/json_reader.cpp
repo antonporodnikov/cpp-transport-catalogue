@@ -208,6 +208,23 @@ void JsonReader::ParseRenderSettings(const json::Node& render_settings)
     }
 }
 
+void JsonReader::ParseRoutingSettings(const json::Node& routing_settings)
+{
+    const json::Dict& request = routing_settings.AsDict();
+
+    int wait_time = request.at("bus_wait_time").AsInt();
+    double velocity = request.at("bus_velocity").AsDouble();
+
+    if ((wait_time < 1 || wait_time > 1000) ||
+        (velocity < 1.0 || velocity > 1000.0))
+    {
+        throw std::logic_error("Invalid value in router_settings");
+    }
+
+    routing_settings_.bus_wait_time = wait_time;
+    routing_settings_.bus_velocity = velocity;
+}
+
 void JsonReader::ParseJSON(std::istream& input)
 {
     const json::Document json_data = json::Load(input);
@@ -226,6 +243,11 @@ void JsonReader::ParseJSON(std::istream& input)
     if (requests.count("render_settings"))
     {
         ParseRenderSettings(requests.at("render_settings"));
+    }
+
+    if (requests.count("routing_settings"))
+    {
+        ParseRoutingSettings(requests.at("routing_settings"));
     }
 }
 

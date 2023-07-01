@@ -4,6 +4,7 @@
 #include "map_renderer.h"
 #include "request_handler.h"
 #include "transport_catalogue.h"
+#include "transport_router.h"
 
 #include <istream>
 
@@ -27,6 +28,7 @@ private:
     TransportCatalogue& catalogue_;
     domain::RequestQueue request_queue_;
     map_renderer::RenderSettingsRequest render_settings_; 
+    transport_router::TransportRouterSettings routing_settings_;
 
     void ParseStopRequest(const json::Node& stop_request);
 
@@ -41,6 +43,8 @@ private:
     svg::Color FormatColor(const json::Node& color);
 
     void ParseRenderSettings(const json::Node& render_settings);
+
+    void ParseRoutingSettings(const json::Node& routing_settings);
 
     void ParseJSON(std::istream& input);
 
