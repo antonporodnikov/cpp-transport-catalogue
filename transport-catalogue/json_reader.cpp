@@ -32,6 +32,25 @@ void JsonReader::UpdateCatalogue()
             ProcessingBusRequest(request);
         }
     }
+
+    bool is_route_request = false;
+    for (const auto& request : request_queue_.stats_requests)
+    {
+        if (std::holds_alternative<domain::RouteRequest>(request))
+        {
+            is_route_request = true;
+        }
+    }
+
+    if (is_route_request)
+    {
+        graph_ = std::make_unique<graph::DirectedWeightedGraph<double>>(
+            catalogue_.GetAllStops().size());
+        transport_router::TransportRouter tr_temp(router_settings_);
+        tr_temp.FillGraph(catalogue_, *graph_);
+
+        router_ = std::make_unique<graph::Router<double>>(*graph_);
+    }
 }
 
 void JsonReader::PrintStat(std::ostream& output)
@@ -106,9 +125,26 @@ void JsonReader::ParseBaseRequests(const json::Node& base_requests)
     }
 }
 
+void JsonReader::ParseRouteRequest(const json::Dict& route_request)
+{
+    const int id = route_request.at("id").AsInt();
+    const std::string type = route_request.at("type").AsString();
+    const std::string from = route_request.at("from").AsString();
+    const std::string to = route_request.at("to").AsString();
+
+    domain::RouteRequest temp{id, type, from, to};
+    request_queue_.stats_requests.push_back(std::move(temp));
+}
+
 void JsonReader::ParseStatRequest(const json::Node& stat_request)
 {
     const json::Dict& request = stat_request.AsDict();
+
+    if (request.at("type") == "Route")
+    {
+        ParseRouteRequest(request);
+        return;
+    }
 
     const int id = request.at("id").AsInt();
     const std::string type = request.at("type").AsString();
@@ -116,12 +152,14 @@ void JsonReader::ParseStatRequest(const json::Node& stat_request)
     if (request.count("name") != 0)
     {
         const std::string name = request.at("name").AsString();
-        request_queue_.stats_requests.push_back({id, type, name});
+        domain::StatRequest temp{id, type, name};
+        request_queue_.stats_requests.push_back(std::move(temp));
 
         return;
     }
 
-    request_queue_.stats_requests.push_back({id, type, ""});
+    domain::StatRequest temp{id, type, ""};
+    request_queue_.stats_requests.push_back(std::move(temp));
 }
 
 void JsonReader::ParseStatRequests(const json::Node& stat_requests)
@@ -221,8 +259,8 @@ void JsonReader::ParseRoutingSettings(const json::Node& routing_settings)
         throw std::logic_error("Invalid value in router_settings");
     }
 
-    routing_settings_.bus_wait_time = wait_time;
-    routing_settings_.bus_velocity = velocity;
+    router_settings_.bus_wait_time = static_cast<uint16_t>(wait_time);
+    router_settings_.bus_velocity = velocity;
 }
 
 void JsonReader::ParseJSON(std::istream& input)
@@ -353,6 +391,86 @@ void JsonReader::ComputeStatRequest(json::Builder& builder,
     }
 }
 
+void JsonReader::BuildSameStopsResponse(json::Builder& builder,
+    const domain::RouteRequest& request)
+{
+    builder.StartDict().Key("total_time"s).Value(0)
+        .Key("request_id"s).Value(request.id)
+        .Key("items"s).StartArray().EndArray().EndDict();
+}
+
+void JsonReader::BuildValidRouteResponse(
+    const graph::Router<double>::RouteInfo& route_data,
+    json::Builder& builder, const domain::RouteRequest& request)
+{
+    json::Array route_items;
+
+    for (const auto& edge_id : route_data.edges)
+    {
+        const auto& edge = graph_->GetEdge(edge_id);
+        std::string stop_name = catalogue_.GetAllStops().at(edge.from).name;
+
+        json::Dict wait_type = json::Builder{}.StartDict()
+            .Key("time"s).Value(router_settings_.bus_wait_time)
+            .Key("type"s).Value("Wait"s)
+            .Key("stop_name"s).Value(stop_name).EndDict().Build().AsDict();
+
+        json::Dict bus_type = json::Builder{}.StartDict()
+            .Key("time"s).Value(edge.weight - router_settings_.bus_wait_time)
+            .Key("span_count"s).Value(edge.span_count)
+            .Key("bus"s).Value(edge.bus_name)
+            .Key("type"s).Value("Bus"s)
+            .EndDict().Build().AsDict();
+
+        route_items.push_back(std::move(wait_type));
+        route_items.push_back(std::move(bus_type));
+    }
+
+    builder.StartDict().Key("total_time"s).Value(route_data.weight)
+        .Key("request_id"s).Value(request.id)
+        .Key("items"s).Value(route_items).EndDict();
+}
+
+void JsonReader::BuildNonValidRouteResponse(json::Builder& builder,
+    const domain::RouteRequest& request)
+{
+    builder.StartDict().Key("request_id"s).Value(request.id)
+        .Key("error_message"s).Value("not found"s)
+        .EndDict();
+}
+
+void JsonReader::ComputeRouteRequest(json::Builder& builder,
+    const domain::RouteRequest& request)
+{
+    const domain::Stop* stop_from = catalogue_.GetStop(request.from);
+    const domain::Stop* stop_to = catalogue_.GetStop(request.to);
+
+    if (stop_from == stop_to)
+    {
+        BuildSameStopsResponse(builder, request);
+
+        return;
+    }
+    else
+    {
+        const auto route_data = router_->BuildRoute(stop_from->edge_id,
+            stop_to->edge_id);
+
+        if (route_data.has_value())
+        {
+            BuildValidRouteResponse(route_data.value(), builder, request);
+
+            return;
+        }
+        else
+        {
+            BuildNonValidRouteResponse(builder, request);
+
+            return;
+        }
+    }
+}
+
 json::Node JsonReader::ComputeJSON()
 {
     json::Builder result;
@@ -360,9 +478,18 @@ json::Node JsonReader::ComputeJSON()
 
     if (!request_queue_.stats_requests.empty())
     {
-        for (const domain::StatRequest& request : request_queue_.stats_requests)
+        for (const auto& request : request_queue_.stats_requests)
         {
-            ComputeStatRequest(result, request);
+            if (std::holds_alternative<domain::StatRequest>(request))
+            {
+                ComputeStatRequest(result,
+                    std::get<domain::StatRequest>(request));
+            }
+            else
+            {
+                ComputeRouteRequest(result,
+                    std::get<domain::RouteRequest>(request));
+            }
         }
     }
 

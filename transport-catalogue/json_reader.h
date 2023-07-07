@@ -1,12 +1,16 @@
 #pragma once
 
+#include "graph.h"
 #include "json_builder.h"
 #include "map_renderer.h"
 #include "request_handler.h"
+#include "router.h"
 #include "transport_catalogue.h"
 #include "transport_router.h"
 
 #include <istream>
+#include <memory>
+#include <utility>
 
 using transport_catalogue::TransportCatalogue;
 
@@ -28,13 +32,17 @@ private:
     TransportCatalogue& catalogue_;
     domain::RequestQueue request_queue_;
     map_renderer::RenderSettingsRequest render_settings_; 
-    transport_router::TransportRouterSettings routing_settings_;
+    transport_router::TransportRouterSettings router_settings_;
+    std::unique_ptr<graph::DirectedWeightedGraph<double>> graph_ = nullptr;
+    std::unique_ptr<graph::Router<double>> router_ = nullptr;
 
     void ParseStopRequest(const json::Node& stop_request);
 
     void ParseBusRequest(const json::Node& bus_request);
 
     void ParseBaseRequests(const json::Node& base_requests);
+
+    void ParseRouteRequest(const json::Dict& route_request);
 
     void ParseStatRequest(const json::Node& stat_request);
 
@@ -56,6 +64,19 @@ private:
 
     void ComputeStatRequest(json::Builder& builder,
         const domain::StatRequest& request);
+
+    void BuildSameStopsResponse(json::Builder& builder,
+        const domain::RouteRequest& request);
+
+    void BuildValidRouteResponse(
+        const graph::Router<double>::RouteInfo& route_data,
+        json::Builder& builder, const domain::RouteRequest& request);
+
+    void BuildNonValidRouteResponse(json::Builder& builder,
+        const domain::RouteRequest& request);
+
+    void ComputeRouteRequest(json::Builder& builder,
+        const domain::RouteRequest& request);
 
     json::Node ComputeJSON();
 };

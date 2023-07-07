@@ -4,6 +4,7 @@
 
 #include <map>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace domain {
@@ -11,6 +12,7 @@ namespace domain {
 struct Stop {
     std::string name;
     geo::Coordinates coords;
+    uint16_t edge_id;
 };
 
 struct Bus {
@@ -38,10 +40,17 @@ struct StatRequest {
     std::string name;
 };
 
+struct RouteRequest {
+    int id;
+    std::string type;
+    std::string from;
+    std::string to;
+};
+
 struct RequestQueue {
     std::vector<StopRequest> stops_requests;
     std::vector<BusRequest> buses_requests;
-    std::vector<StatRequest> stats_requests;
+    std::vector<std::variant<StatRequest, RouteRequest>> stats_requests;
 };
 
 }

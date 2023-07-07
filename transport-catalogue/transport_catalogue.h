@@ -76,6 +76,10 @@ public:
 
     std::set<std::string_view> GetBusesToStop(
         const std::string& stop_name) const;
+    
+    const StopsToDistance& GetStopsToDistance() const;
+
+    const std::deque<domain::Stop>& GetAllStops() const;
 
     int ComputeStopsCount(const std::string& bus_name) const;
 

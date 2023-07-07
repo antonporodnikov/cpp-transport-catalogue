@@ -2,10 +2,13 @@
 
 namespace transport_catalogue {
 
+using StopsToDistance = std::unordered_map<std::pair<
+    domain::Stop*, domain::Stop*>, int, hashers::StopPtrsHasher>;
+
 void TransportCatalogue::AddStop(const std::string& name,
     const geo::Coordinates& coords)
 {
-    stops_.push_back({name, coords});
+    stops_.push_back({name, coords, static_cast<uint16_t>(stops_.size())});
 
     domain::Stop& stop = stops_.back();
     std::string_view name_strv = stop.name;
@@ -85,6 +88,16 @@ std::set<std::string_view> TransportCatalogue::GetBusesToStop(
     }
 
     return stopname_to_buses_.at(stop_name);
+}
+
+const StopsToDistance& TransportCatalogue::GetStopsToDistance() const
+{
+    return stops_to_distance_;
+}
+
+const std::deque<domain::Stop>& TransportCatalogue::GetAllStops() const
+{
+    return stops_;
 }
 
 int TransportCatalogue::ComputeStopsCount(const std::string& bus_name) const
