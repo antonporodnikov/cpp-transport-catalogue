@@ -7,6 +7,25 @@ using namespace std::string_literals;
 TransportRouter::TransportRouter(const TransportRouterSettings& router_settings)
     : router_settings_(router_settings) {}
 
+void TransportRouter::FillGraph(const TransportCatalogue& catalogue,
+    graph::DirectedWeightedGraph<double>& graph) const
+{
+    for (const auto& [name, route] : catalogue.GetRoutes())
+    {
+        const std::vector<domain::Stop*>& stops = route->stops;
+
+        if (stops.size() > 1)
+        {
+            AddEdgesForwards(stops, catalogue, graph, name);
+            
+            if (!(route->is_round))
+            {
+                AddEdgesBackwards(stops, catalogue, graph, name);
+            }
+        }
+    }
+}
+
 double TransportRouter::ComputeEdgeWeight(const double distance) const
 {
     const double DISTANCE_CONVERT_VALUE = 1000.0;
@@ -71,25 +90,6 @@ void TransportRouter::AddEdgesBackwards(const std::vector<domain::Stop*>& stops,
                     route_name, span});
 
                 ++span;
-            }
-        }
-    }
-}
-
-void TransportRouter::FillGraph(const TransportCatalogue& catalogue,
-    graph::DirectedWeightedGraph<double>& graph) const
-{
-    for (const auto& [name, route] : catalogue.GetRoutes())
-    {
-        const std::vector<domain::Stop*>& stops = route->stops;
-
-        if (stops.size() > 1)
-        {
-            AddEdgesForwards(stops, catalogue, graph, name);
-            
-            if (!(route->is_round))
-            {
-                AddEdgesBackwards(stops, catalogue, graph, name);
             }
         }
     }

@@ -22,6 +22,12 @@ class TransportRouter {
 public:
      TransportRouter(const TransportRouterSettings& router_settings);
 
+     void FillGraph(const TransportCatalogue& catalogue,
+          graph::DirectedWeightedGraph<double>& graph) const;
+
+private:
+     TransportRouterSettings router_settings_;
+
      double ComputeEdgeWeight(const double distance) const;
 
      void AddEdgesForwards(const std::vector<domain::Stop*>& stops,
@@ -33,12 +39,6 @@ public:
           const TransportCatalogue& catalogue,
           graph::DirectedWeightedGraph<double>& graph,
           const std::string& route_name) const;
-
-     void FillGraph(const TransportCatalogue& catalogue,
-          graph::DirectedWeightedGraph<double>& graph) const;
-
-private:
-     TransportRouterSettings router_settings_;
 };
 
 }  // namespace transport_router

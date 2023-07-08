@@ -374,7 +374,8 @@ void JsonReader::ComputeStatRequest(json::Builder& builder,
         try
         {
             const map_renderer::MapRenderer renderer(render_settings_);
-            const request_handler::RequestHandler handler(catalogue_, renderer);
+            const request_handler::MapRequestHandler handler(catalogue_,
+                renderer);
 
             svg::Document map = handler.RenderMap();
             std::stringstream temp;
@@ -453,7 +454,8 @@ void JsonReader::ComputeRouteRequest(json::Builder& builder,
     }
     else
     {
-        const auto route_data = router_->BuildRoute(stop_from->edge_id,
+        request_handler::RouterRequestHandler handler(*router_);
+        const auto route_data = handler.BuildRoute(stop_from->edge_id,
             stop_to->edge_id);
 
         if (route_data.has_value())
