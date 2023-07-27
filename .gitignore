@@ -31,8 +31,8 @@
 *.out
 *.app
 
-# .txt
-*.txt
-
 # Temp folder
 temp/
+
+# .vscode folder
+.vscode/

@@ -2,6 +2,7 @@
 
 #include "geo.h"
 
+#include <cstdint>
 #include <map>
 #include <string>
 #include <variant>
