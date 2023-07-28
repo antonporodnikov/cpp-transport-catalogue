@@ -68,6 +68,11 @@ map_renderer::RenderSettingsRequest JsonReader::GetRenderSettings() const
     return render_settings_;
 }
 
+serialization::SerializationSettings JsonReader::GetSerializationSettings() const
+{
+    return serialization_settings_;
+}
+    
 void JsonReader::ParseStopRequest(const json::Node& stop_request)
 {
     const json::Dict& request = stop_request.AsDict();
@@ -263,6 +268,15 @@ void JsonReader::ParseRoutingSettings(const json::Node& routing_settings)
     router_settings_.bus_velocity = velocity;
 }
 
+void JsonReader::ParseSerializationSettings(
+    const json::Node& serialization_settings)
+{
+    const json::Dict& request = serialization_settings.AsDict();    
+
+    std::string file_name_temp = request.at("file").AsString();
+    serialization_settings_.file_name = file_name_temp;
+}
+
 void JsonReader::ParseJSON(std::istream& input)
 {
     const json::Document json_data = json::Load(input);
@@ -286,6 +300,11 @@ void JsonReader::ParseJSON(std::istream& input)
     if (requests.count("routing_settings"))
     {
         ParseRoutingSettings(requests.at("routing_settings"));
+    }
+
+    if (requests.count("serialization_settings"))
+    {
+        ParseSerializationSettings(requests.at("serialization_settings"));
     }
 }
 

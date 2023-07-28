@@ -2,6 +2,7 @@
 
 #include "ranges.h"
 
+#include <cstdint>
 #include <cstdlib>
 #include <string>
 #include <vector>

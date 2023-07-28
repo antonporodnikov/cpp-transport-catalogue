@@ -81,6 +81,8 @@ public:
 
     const std::deque<domain::Stop>& GetAllStops() const;
 
+    const std::deque<domain::Bus>& GetAllBuses() const;
+
     int ComputeStopsCount(const std::string& bus_name) const;
 
     int ComputeUniqueStopsCount(const std::string& bus_name) const;

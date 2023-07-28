@@ -31,8 +31,12 @@
 *.out
 *.app
 
-# Temp folder
-temp/
-
-# .vscode folder
+# Folders
 .vscode/
+build_tc/
+temp/
+Protobuf
+
+# Project files
+transport_catalogue.pb.cc
+transport_catalogue.pb.h

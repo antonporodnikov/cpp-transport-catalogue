@@ -100,6 +100,11 @@ const std::deque<domain::Stop>& TransportCatalogue::GetAllStops() const
     return stops_;
 }
 
+const std::deque<domain::Bus>& TransportCatalogue::GetAllBuses() const
+{
+    return buses_;
+}
+
 int TransportCatalogue::ComputeStopsCount(const std::string& bus_name) const
 {
     return static_cast<int>(GetBus(bus_name)->stops.size());

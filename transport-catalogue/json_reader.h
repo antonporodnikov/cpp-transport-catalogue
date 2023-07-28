@@ -5,6 +5,7 @@
 #include "map_renderer.h"
 #include "request_handler.h"
 #include "router.h"
+#include "serialization.h"
 #include "transport_catalogue.h"
 #include "transport_router.h"
 
@@ -28,6 +29,8 @@ public:
 
     map_renderer::RenderSettingsRequest GetRenderSettings() const;
 
+    serialization::SerializationSettings GetSerializationSettings() const;
+
 private:
     TransportCatalogue& catalogue_;
     domain::RequestQueue request_queue_;
@@ -35,6 +38,7 @@ private:
     transport_router::TransportRouterSettings router_settings_;
     std::unique_ptr<graph::DirectedWeightedGraph<double>> graph_ = nullptr;
     std::unique_ptr<graph::Router<double>> router_ = nullptr;
+    serialization::SerializationSettings serialization_settings_;
 
     void ParseStopRequest(const json::Node& stop_request);
 
@@ -53,6 +57,8 @@ private:
     void ParseRenderSettings(const json::Node& render_settings);
 
     void ParseRoutingSettings(const json::Node& routing_settings);
+
+    void ParseSerializationSettings(const json::Node& serialization_settings);
 
     void ParseJSON(std::istream& input);
 
