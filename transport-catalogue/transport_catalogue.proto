@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "map_renderer.proto";
+
 package transport_catalogue_serialize;
 
 message Coordinates {
@@ -29,4 +31,5 @@ message TransportCatalogueBase {
     repeated Stop stops = 1;
     repeated Bus buses = 2;
     repeated StopsToDistance stops_to_distance = 3;
+    map_renderer_serialize.MapRenderer render_settings = 4;
 }

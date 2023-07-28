@@ -57,12 +57,12 @@ void JsonReader::UpdateCatalogue()
 
 void JsonReader::Serialize()
 {
-    serialization_machine_.Serialize();
+    serialization_machine_.Serialize(render_settings_);
 }
 
 void JsonReader::Deserialize()
 {
-    serialization_machine_.Deserialize();
+    serialization_machine_.Deserialize(render_settings_);
 }
 
 void JsonReader::PrintStat(std::ostream& output)

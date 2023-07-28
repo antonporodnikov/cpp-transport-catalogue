@@ -12,7 +12,8 @@ void SerializationMachine::SetSettings(const std::string& file_name)
     serialization_settings_.file_name = file_name;
 }
 
-void SerializationMachine::Serialize()
+void SerializationMachine::Serialize(
+    const map_renderer::RenderSettingsRequest& render_settings)
 {
     std::ofstream ofs(serialization_settings_.file_name.c_str(),
         std::ios::binary);
@@ -20,11 +21,13 @@ void SerializationMachine::Serialize()
     SerializeStops();
     SerializeStopsToDistance();
     SerializeBuses();
+    SerializeRenderSettings(render_settings);
 
     tcb_.SerializeToOstream(&ofs);
 }
 
-void SerializationMachine::Deserialize()
+void SerializationMachine::Deserialize(
+    map_renderer::RenderSettingsRequest& render_settings)
 {
     std::ifstream ifs(serialization_settings_.file_name.c_str(),
         std::ios::binary);
@@ -33,6 +36,7 @@ void SerializationMachine::Deserialize()
     DeserializeStops();
     DeserializeStopsToDistance();
     DeserializeBuses();
+    DeserializeRenderSettings(render_settings);
 }
 
 transport_catalogue_serialize::Stop SerializationMachine::SerializeStop(
@@ -101,6 +105,66 @@ void SerializationMachine::SerializeBuses()
     }
 }
 
+void SerializationMachine::SerializeColor(const svg::Color& color,
+    map_renderer_serialize::Color& color_proto)
+{
+    if (std::holds_alternative<std::monostate>(color))
+    {
+        color_proto.set_is_none(true);
+    }
+    else if (std::holds_alternative<std::string>(color))
+    {
+        const std::string& color_name = std::get<std::string>(color);
+        color_proto.set_name(color_name);
+    }
+    else if (std::holds_alternative<svg::Rgb>(color))
+    {
+        auto& rgb_proto = *color_proto.mutable_rgb();
+        const svg::Rgb& rgb = std::get<svg::Rgb>(color);
+        rgb_proto.set_red(rgb.red);
+        rgb_proto.set_blue(rgb.blue);
+        rgb_proto.set_green(rgb.green);
+    }
+    else if (std::holds_alternative<svg::Rgba>(color))
+    {
+        auto& rgba_proto = *color_proto.mutable_rgba();
+        const svg::Rgba& rgba = std::get<svg::Rgba>(color);
+        rgba_proto.set_red(rgba.red);
+        rgba_proto.set_blue(rgba.blue);
+        rgba_proto.set_green(rgba.green);
+        rgba_proto.set_opacity(rgba.opacity);
+    }
+}
+
+void SerializationMachine::SerializeRenderSettings(
+    const map_renderer::RenderSettingsRequest& render_settings)
+{
+    map_renderer_serialize::MapRenderer render_settings_proto;
+
+    render_settings_proto.set_width(render_settings.width);
+    render_settings_proto.set_height(render_settings.height);
+    render_settings_proto.set_padding(render_settings.padding);
+    render_settings_proto.set_line_width(render_settings.line_width);
+    render_settings_proto.set_stop_radius(render_settings.stop_radius);
+    render_settings_proto.set_bus_label_font_size(render_settings.bus_label_font_size);
+    render_settings_proto.set_bus_label_offset_x(render_settings.bus_label_offset.first);
+    render_settings_proto.set_bus_label_offset_y(render_settings.bus_label_offset.second);
+    render_settings_proto.set_stop_label_font_size(render_settings.stop_label_font_size);
+    render_settings_proto.set_stop_label_offset_x(render_settings.stop_label_offset.first);
+    render_settings_proto.set_stop_label_offset_y(render_settings.stop_label_offset.second);
+    render_settings_proto.set_underlayer_width(render_settings.underlayer_width);
+    
+    SerializeColor(render_settings.underlayer_color,
+        *render_settings_proto.mutable_underlayer_color());
+    
+    for (const svg::Color& color : render_settings.color_palette)
+    {
+        SerializeColor(color, *render_settings_proto.add_color_palette());
+    }
+
+    *tcb_.mutable_render_settings() = render_settings_proto;
+}
+
 void SerializationMachine::DeserializeStop(
     const transport_catalogue_serialize::Stop& stop)
 {
@@ -151,6 +215,54 @@ void SerializationMachine::DeserializeBuses()
     for (int i = 0; i < tcb_.buses_size(); ++i)
     {
         DeserializeBus(tcb_.buses(i));
+    }
+}
+
+svg::Color SerializationMachine::DeserializeColor(
+    const map_renderer_serialize::Color& color_proto)
+{
+    const auto& rgba_proto = color_proto.rgba();
+    const auto& rgb_proto = color_proto.rgb();
+
+    switch(color_proto.data_case())
+    {
+        case map_renderer_serialize::Color::kIsNone:
+            return std::monostate{};
+        case map_renderer_serialize::Color::kName:
+            return color_proto.name();
+        case map_renderer_serialize::Color::kRgba:
+            return svg::Rgba(rgba_proto.red(), rgba_proto.green(),
+                rgba_proto.blue(), rgba_proto.opacity());
+        case map_renderer_serialize::Color::kRgb:
+            return svg::Rgb(rgb_proto.red(), rgb_proto.green(), rgb_proto.blue());
+    }
+
+    return std::monostate{};
+}
+
+void SerializationMachine::DeserializeRenderSettings(
+    map_renderer::RenderSettingsRequest& render_settings)
+{
+    auto& rs_proto = *tcb_.mutable_render_settings();
+
+    render_settings.width = rs_proto.width();
+    render_settings.height = rs_proto.height();
+    render_settings.padding = rs_proto.padding();
+    render_settings.line_width = rs_proto.line_width();
+    render_settings.stop_radius = rs_proto.stop_radius();
+    render_settings.bus_label_font_size = rs_proto.bus_label_font_size();
+    render_settings.bus_label_offset.first = rs_proto.bus_label_offset_x();
+    render_settings.bus_label_offset.second = rs_proto.bus_label_offset_y();
+    render_settings.stop_label_font_size = rs_proto.stop_label_font_size();
+    render_settings.stop_label_offset.first = rs_proto.stop_label_offset_x();
+    render_settings.stop_label_offset.second = rs_proto.stop_label_offset_y();
+    render_settings.underlayer_width = rs_proto.underlayer_width();
+
+    render_settings.underlayer_color = DeserializeColor(rs_proto.underlayer_color());
+
+    for (const auto& color : rs_proto.color_palette())
+    {
+        render_settings.color_palette.push_back(DeserializeColor(color));
     }
 }
 

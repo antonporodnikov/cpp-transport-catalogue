@@ -1,9 +1,12 @@
 #pragma once
 
 #include "domain.h"
+#include "map_renderer.h"
+#include "svg.h"
 #include "transport_catalogue.h"
 
 #include <transport_catalogue.pb.h>
+#include <map_renderer.pb.h>
 
 #include <fstream>
 #include <string>
@@ -23,9 +26,9 @@ public:
 
     void SetSettings(const std::string& file_name);
     
-    void Serialize();
+    void Serialize(const map_renderer::RenderSettingsRequest& render_settings);
 
-    void Deserialize();
+    void Deserialize(map_renderer::RenderSettingsRequest& render_settings);
 
 private:
     SerializationSettings serialization_settings_;
@@ -47,6 +50,12 @@ private:
 
     void SerializeBuses();
 
+    void SerializeColor(const svg::Color& color,
+        map_renderer_serialize::Color& color_proto);
+
+    void SerializeRenderSettings(
+        const map_renderer::RenderSettingsRequest& render_settings);
+
     void DeserializeStop(const transport_catalogue_serialize::Stop& stop);
 
     void DeserializeStopsToDistanceElement(
@@ -59,6 +68,12 @@ private:
     void DeserializeStopsToDistance();
 
     void DeserializeBuses();
+
+    svg::Color DeserializeColor(
+        const map_renderer_serialize::Color& color_proto);
+
+    void DeserializeRenderSettings(
+        map_renderer::RenderSettingsRequest& render_settings);
 };
 
 }

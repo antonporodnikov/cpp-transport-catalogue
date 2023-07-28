@@ -40,3 +40,5 @@ Protobuf
 # Project files
 transport_catalogue.pb.cc
 transport_catalogue.pb.h
+map_renderer.pb.cc
+map_renderer.pb.h
