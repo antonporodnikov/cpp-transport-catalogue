@@ -19,17 +19,20 @@ namespace json_reader {
 
 class JsonReader {
 public:
-    explicit JsonReader(TransportCatalogue& catalogue, std::istream& input);
+    explicit JsonReader(TransportCatalogue& catalogue, serialization::SerializationMachine& sm,
+        std::istream& input);
 
     void UpdateCatalogue();
+
+    void Serialize();
+
+    void Deserialize();
 
     void PrintStat(std::ostream& output);
 
     const domain::RequestQueue& GetRequestQueue() const;
 
     map_renderer::RenderSettingsRequest GetRenderSettings() const;
-
-    serialization::SerializationSettings GetSerializationSettings() const;
 
 private:
     TransportCatalogue& catalogue_;
@@ -38,7 +41,7 @@ private:
     transport_router::TransportRouterSettings router_settings_;
     std::unique_ptr<graph::DirectedWeightedGraph<double>> graph_ = nullptr;
     std::unique_ptr<graph::Router<double>> router_ = nullptr;
-    serialization::SerializationSettings serialization_settings_;
+    serialization::SerializationMachine serialization_machine_;
 
     void ParseStopRequest(const json::Node& stop_request);
 

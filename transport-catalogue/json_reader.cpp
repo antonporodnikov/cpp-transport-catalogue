@@ -4,8 +4,10 @@ using namespace std::literals;
 
 namespace json_reader {
 
-JsonReader::JsonReader(TransportCatalogue& catalogue, std::istream& input)
+JsonReader::JsonReader(TransportCatalogue& catalogue,
+    serialization::SerializationMachine& sm, std::istream& input)
     : catalogue_(catalogue)
+    , serialization_machine_(sm)
 {
     JsonReader::ParseJSON(input);
 }
@@ -53,6 +55,16 @@ void JsonReader::UpdateCatalogue()
     }
 }
 
+void JsonReader::Serialize()
+{
+    serialization_machine_.Serialize();
+}
+
+void JsonReader::Deserialize()
+{
+    serialization_machine_.Deserialize();
+}
+
 void JsonReader::PrintStat(std::ostream& output)
 {
     json::Print(json::Document{ComputeJSON()}, output);
@@ -68,11 +80,6 @@ map_renderer::RenderSettingsRequest JsonReader::GetRenderSettings() const
     return render_settings_;
 }
 
-serialization::SerializationSettings JsonReader::GetSerializationSettings() const
-{
-    return serialization_settings_;
-}
-    
 void JsonReader::ParseStopRequest(const json::Node& stop_request)
 {
     const json::Dict& request = stop_request.AsDict();
@@ -274,7 +281,8 @@ void JsonReader::ParseSerializationSettings(
     const json::Dict& request = serialization_settings.AsDict();    
 
     std::string file_name_temp = request.at("file").AsString();
-    serialization_settings_.file_name = file_name_temp;
+
+    serialization_machine_.SetSettings(file_name_temp);
 }
 
 void JsonReader::ParseJSON(std::istream& input)

@@ -21,18 +21,17 @@ int main(int argc, char* argv[]) {
     const std::string_view mode(argv[1]);
 
     transport_catalogue::TransportCatalogue catalogue;
-    json_reader::JsonReader json_reader(catalogue, std::cin);
-    serialization::SerializationMachine sm(catalogue,
-        json_reader.GetSerializationSettings());
+    serialization::SerializationMachine sm(catalogue);
+    json_reader::JsonReader json_reader(catalogue, sm, std::cin);
         
     if (mode == "make_base"sv) {
         // make base here
         json_reader.UpdateCatalogue();
-        sm.Serialize();
+        json_reader.Serialize();
 
     } else if (mode == "process_requests"sv) {
         // process requests here
-        sm.Deserialize();
+        json_reader.Deserialize();
         json_reader.PrintStat(std::cout);
 
     } else {

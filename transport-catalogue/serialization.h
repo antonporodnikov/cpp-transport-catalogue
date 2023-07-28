@@ -19,15 +19,16 @@ struct SerializationSettings {
 
 class SerializationMachine {
 public:
-    SerializationMachine(TransportCatalogue& catalogue,
-        const SerializationSettings& serialization_settings);
+    SerializationMachine(TransportCatalogue& catalogue);
+
+    void SetSettings(const std::string& file_name);
     
     void Serialize();
 
     void Deserialize();
 
 private:
-    const SerializationSettings serialization_settings_;
+    SerializationSettings serialization_settings_;
     TransportCatalogue& catalogue_; 
     transport_catalogue_serialize::TransportCatalogueBase tcb_;
 

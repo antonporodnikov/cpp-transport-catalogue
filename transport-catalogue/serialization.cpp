@@ -2,11 +2,14 @@
 
 namespace serialization {
 
-SerializationMachine::SerializationMachine(TransportCatalogue& catalogue,
-    const SerializationSettings& serialization_settings)
+SerializationMachine::SerializationMachine(TransportCatalogue& catalogue)
     : catalogue_(catalogue)
-    , serialization_settings_(serialization_settings)
 {
+}
+
+void SerializationMachine::SetSettings(const std::string& file_name)
+{
+    serialization_settings_.file_name = file_name;
 }
 
 void SerializationMachine::Serialize()
