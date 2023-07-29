@@ -13,7 +13,8 @@ void SerializationMachine::SetSettings(const std::string& file_name)
 }
 
 void SerializationMachine::Serialize(
-    const map_renderer::RenderSettingsRequest& render_settings)
+    const map_renderer::RenderSettingsRequest& render_settings,
+    const transport_router::TransportRouterSettings& router_settings)
 {
     std::ofstream ofs(serialization_settings_.file_name.c_str(),
         std::ios::binary);
@@ -22,12 +23,14 @@ void SerializationMachine::Serialize(
     SerializeStopsToDistance();
     SerializeBuses();
     SerializeRenderSettings(render_settings);
+    SerializeRouterSettings(router_settings);
 
     tcb_.SerializeToOstream(&ofs);
 }
 
 void SerializationMachine::Deserialize(
-    map_renderer::RenderSettingsRequest& render_settings)
+    map_renderer::RenderSettingsRequest& render_settings,
+    transport_router::TransportRouterSettings& router_settings)
 {
     std::ifstream ifs(serialization_settings_.file_name.c_str(),
         std::ios::binary);
@@ -37,6 +40,7 @@ void SerializationMachine::Deserialize(
     DeserializeStopsToDistance();
     DeserializeBuses();
     DeserializeRenderSettings(render_settings);
+    DeserializeRouterSettings(router_settings);
 }
 
 transport_catalogue_serialize::Stop SerializationMachine::SerializeStop(
@@ -165,6 +169,17 @@ void SerializationMachine::SerializeRenderSettings(
     *tcb_.mutable_render_settings() = render_settings_proto;
 }
 
+void SerializationMachine::SerializeRouterSettings(
+    const transport_router::TransportRouterSettings& router_settings)
+{
+    router_serialize::RouterSettings router_settings_proto;
+
+    router_settings_proto.set_bus_wait_time(router_settings.bus_wait_time);
+    router_settings_proto.set_bus_velocity(router_settings.bus_velocity);
+
+    *tcb_.mutable_router_settings() = router_settings_proto;
+}
+
 void SerializationMachine::DeserializeStop(
     const transport_catalogue_serialize::Stop& stop)
 {
@@ -264,6 +279,15 @@ void SerializationMachine::DeserializeRenderSettings(
     {
         render_settings.color_palette.push_back(DeserializeColor(color));
     }
+}
+
+void SerializationMachine::DeserializeRouterSettings(
+    transport_router::TransportRouterSettings& router_settings)
+{
+    auto& rs_proto = *tcb_.mutable_router_settings();
+
+    router_settings.bus_wait_time = rs_proto.bus_wait_time();
+    router_settings.bus_velocity = rs_proto.bus_velocity();
 }
 
 }

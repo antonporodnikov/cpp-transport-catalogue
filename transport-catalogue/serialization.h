@@ -4,6 +4,7 @@
 #include "map_renderer.h"
 #include "svg.h"
 #include "transport_catalogue.h"
+#include "transport_router.h"
 
 #include <transport_catalogue.pb.h>
 #include <map_renderer.pb.h>
@@ -26,9 +27,11 @@ public:
 
     void SetSettings(const std::string& file_name);
     
-    void Serialize(const map_renderer::RenderSettingsRequest& render_settings);
+    void Serialize(const map_renderer::RenderSettingsRequest& render_settings,
+        const transport_router::TransportRouterSettings& router_settings);
 
-    void Deserialize(map_renderer::RenderSettingsRequest& render_settings);
+    void Deserialize(map_renderer::RenderSettingsRequest& render_settings,
+        transport_router::TransportRouterSettings& router_settings);
 
 private:
     SerializationSettings serialization_settings_;
@@ -56,6 +59,9 @@ private:
     void SerializeRenderSettings(
         const map_renderer::RenderSettingsRequest& render_settings);
 
+    void SerializeRouterSettings(
+        const transport_router::TransportRouterSettings& router_settings);
+
     void DeserializeStop(const transport_catalogue_serialize::Stop& stop);
 
     void DeserializeStopsToDistanceElement(
@@ -74,6 +80,9 @@ private:
 
     void DeserializeRenderSettings(
         map_renderer::RenderSettingsRequest& render_settings);
+
+    void DeserializeRouterSettings(
+        transport_router::TransportRouterSettings& router_settings);
 };
 
 }

@@ -42,3 +42,5 @@ transport_catalogue.pb.cc
 transport_catalogue.pb.h
 map_renderer.pb.cc
 map_renderer.pb.h
+transport_router.pb.cc
+transport_router.pb.h
