@@ -6,3 +6,22 @@ message RouterSettings {
     uint32 bus_wait_time = 1;
     double bus_velocity = 2;
 }
+
+message RID {
+    double weight = 1;
+    uint32 prev_edge = 2;
+    bool prev_edge_is_set = 3;
+}
+
+message OptionalRID {
+    RID rid = 1;
+    bool rid_is_set = 2;
+}
+
+message RepeatedRID {
+    repeated OptionalRID optional_rid = 1;
+}
+
+message RepeatedRIDs {
+    repeated RepeatedRID rids = 1;
+}

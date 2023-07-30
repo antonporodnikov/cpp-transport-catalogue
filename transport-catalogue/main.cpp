@@ -25,12 +25,10 @@ int main(int argc, char* argv[]) {
     json_reader::JsonReader json_reader(catalogue, sm, std::cin);
         
     if (mode == "make_base"sv) {
-        // make base here
         json_reader.UpdateCatalogue();
         json_reader.Serialize();
 
     } else if (mode == "process_requests"sv) {
-        // process requests here
         json_reader.Deserialize();
         json_reader.PrintStat(std::cout);
 

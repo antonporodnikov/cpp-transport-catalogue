@@ -34,42 +34,27 @@ void JsonReader::UpdateCatalogue()
             ProcessingBusRequest(request);
         }
     }
-
-    bool is_route_request = false;
-    for (const auto& request : request_queue_.stats_requests)
-    {
-        if (std::holds_alternative<domain::RouteRequest>(request))
-        {
-            is_route_request = true;
-        }
-    }
-
-    // if (is_route_request)
-    // {
-    //     graph_ = std::make_unique<graph::DirectedWeightedGraph<double>>(
-    //         catalogue_.GetAllStops().size());
-    //     transport_router::TransportRouter tr_temp(router_settings_);
-    //     tr_temp.FillGraph(catalogue_, *graph_);
-
-    //     router_ = std::make_unique<graph::Router<double>>(*graph_);
-    // }
 }
 
 void JsonReader::Serialize()
 {
-    serialization_machine_.Serialize(render_settings_, router_settings_);
-}
-
-void JsonReader::Deserialize()
-{
-    serialization_machine_.Deserialize(render_settings_, router_settings_);
-
     graph_ = std::make_unique<graph::DirectedWeightedGraph<double>>(
         catalogue_.GetAllStops().size());
     transport_router::TransportRouter tr_temp(router_settings_);
     tr_temp.FillGraph(catalogue_, *graph_);
+    router_ = std::make_unique<graph::Router<double>>(*graph_, false);
 
-    router_ = std::make_unique<graph::Router<double>>(*graph_);
+    serialization_machine_.Serialize(render_settings_, router_settings_,
+        *graph_, *router_);
+}
+
+void JsonReader::Deserialize()
+{
+    graph_ = std::make_unique<graph::DirectedWeightedGraph<double>>();
+    router_ = std::make_unique<graph::Router<double>>(*graph_, true);
+
+    serialization_machine_.Deserialize(render_settings_, router_settings_,
+        *graph_, *router_);
 }
 
 void JsonReader::PrintStat(std::ostream& output)

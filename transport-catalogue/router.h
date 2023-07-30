@@ -20,7 +20,8 @@ private:
     using Graph = DirectedWeightedGraph<Weight>;
 
 public:
-    explicit Router(const Graph& graph);
+    Router() = default;
+    explicit Router(Graph& graph, bool is_dummy);
 
     struct RouteInfo {
         Weight weight;
@@ -29,14 +30,30 @@ public:
 
     std::optional<RouteInfo> BuildRoute(VertexId from, VertexId to) const;
 
-private:
     struct RouteInternalData {
         Weight weight;
         std::optional<EdgeId> prev_edge;
     };
 
-    using RoutesInternalData = std::vector<std::vector<std::optional<RouteInternalData>>>;
+    using RoutesInternalData = std::vector<std::vector<std::optional<
+        RouteInternalData>>>;
 
+    const RoutesInternalData& GetRIDs() const
+    {
+        return routes_internal_data_;
+    }
+
+    void SetRIDs(RoutesInternalData& rids)
+    {
+        routes_internal_data_ = std::move(rids);
+    }
+
+    void SetGraph(const graph::DirectedWeightedGraph<double>& graph)
+    {
+        graph_ = graph;        
+    }
+
+private:
     void InitializeRoutesInternalData(const Graph& graph)
     {
         const size_t vertex_count = graph.GetVertexCount();
@@ -89,22 +106,25 @@ private:
     }
 
     static constexpr Weight ZERO_WEIGHT{};
-    const Graph& graph_;
+    Graph& graph_;
     RoutesInternalData routes_internal_data_;
 };
 
 template <typename Weight>
-Router<Weight>::Router(const Graph& graph)
+Router<Weight>::Router(Graph& graph, bool is_dummy)
     : graph_(graph)
     , routes_internal_data_(graph.GetVertexCount(),
                             std::vector<std::optional<RouteInternalData>>(graph.GetVertexCount()))
 {
-    InitializeRoutesInternalData(graph);
-
-    const size_t vertex_count = graph.GetVertexCount();
-    for (VertexId vertex_through = 0; vertex_through < vertex_count; ++vertex_through)
+    if (!is_dummy)
     {
-        RelaxRoutesInternalDataThroughVertex(vertex_count, vertex_through);
+        InitializeRoutesInternalData(graph);
+
+        const size_t vertex_count = graph.GetVertexCount();
+        for (VertexId vertex_through = 0; vertex_through < vertex_count; ++vertex_through)
+        {
+            RelaxRoutesInternalDataThroughVertex(vertex_count, vertex_through);
+        }
     }
 }
 

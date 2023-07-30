@@ -19,8 +19,8 @@ namespace json_reader {
 
 class JsonReader {
 public:
-    explicit JsonReader(TransportCatalogue& catalogue, serialization::SerializationMachine& sm,
-        std::istream& input);
+    explicit JsonReader(TransportCatalogue& catalogue,
+        serialization::SerializationMachine& sm, std::istream& input);
 
     void UpdateCatalogue();
 

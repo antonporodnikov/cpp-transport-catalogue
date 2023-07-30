@@ -14,7 +14,9 @@ void SerializationMachine::SetSettings(const std::string& file_name)
 
 void SerializationMachine::Serialize(
     const map_renderer::RenderSettingsRequest& render_settings,
-    const transport_router::TransportRouterSettings& router_settings)
+    const transport_router::TransportRouterSettings& router_settings,
+    const graph::DirectedWeightedGraph<double>& graph,
+    const graph::Router<double>& router)
 {
     std::ofstream ofs(serialization_settings_.file_name.c_str(),
         std::ios::binary);
@@ -24,13 +26,17 @@ void SerializationMachine::Serialize(
     SerializeBuses();
     SerializeRenderSettings(render_settings);
     SerializeRouterSettings(router_settings);
+    SerializeGraph(graph);
+    SerializeRouter(router);
 
     tcb_.SerializeToOstream(&ofs);
 }
 
 void SerializationMachine::Deserialize(
     map_renderer::RenderSettingsRequest& render_settings,
-    transport_router::TransportRouterSettings& router_settings)
+    transport_router::TransportRouterSettings& router_settings,
+    graph::DirectedWeightedGraph<double>& graph,
+    graph::Router<double>& router)
 {
     std::ifstream ifs(serialization_settings_.file_name.c_str(),
         std::ios::binary);
@@ -41,6 +47,8 @@ void SerializationMachine::Deserialize(
     DeserializeBuses();
     DeserializeRenderSettings(render_settings);
     DeserializeRouterSettings(router_settings);
+    DeserializeGraph(graph);
+    DeserializeRouter(router, graph);
 }
 
 transport_catalogue_serialize::Stop SerializationMachine::SerializeStop(
@@ -190,6 +198,121 @@ void SerializationMachine::DeserializeStop(
     catalogue_.AddStop(stop.name(), coords);
 }
 
+graph_serialize::Edge SerializationMachine::SerializeEdge(
+    const graph::Edge<double>& edge)
+{
+    graph_serialize::Edge edge_proto;
+
+    edge_proto.set_from(edge.from);
+    edge_proto.set_to(edge.to);
+    edge_proto.set_weight(edge.weight);
+    edge_proto.set_bus_name(edge.bus_name);
+    edge_proto.set_span_count(edge.span_count);
+
+    return edge_proto;
+}
+
+graph_serialize::IncidenceList SerializationMachine::SerializeIncidenceList(
+    const graph::DirectedWeightedGraph<double>::IncidentEdgesRange& incidence_list)
+{
+    graph_serialize::IncidenceList incidence_list_proto;
+
+    for (const auto& edge_id : incidence_list)
+    {
+        incidence_list_proto.add_edge_id(edge_id);
+    }
+
+    return incidence_list_proto;
+}
+
+void SerializationMachine::SerializeGraph(
+    const graph::DirectedWeightedGraph<double>& graph)
+{
+    graph_serialize::Graph graph_proto;
+
+    for (int i = 0; i < graph.GetEdgeCount(); ++i)
+    {
+        *graph_proto.add_edges() = SerializeEdge(graph.GetEdge(i));
+    }
+
+    for (int i = 0; i < graph.GetVertexCount(); ++i)
+    {
+        *graph_proto.add_incidence_list() = SerializeIncidenceList(
+            graph.GetIncidentEdges(i));
+    }
+
+    *tcb_.mutable_graph() = graph_proto;
+}
+
+router_serialize::RID SerializationMachine::SerializeRID(
+    const graph::Router<double>::RouteInternalData& rid)
+{
+    router_serialize::RID rid_proto;
+
+    rid_proto.set_weight(rid.weight);
+    
+    if (rid.prev_edge.has_value())
+    {
+        rid_proto.set_prev_edge(*(rid.prev_edge));
+        rid_proto.set_prev_edge_is_set(true);
+    }
+    else
+    {
+        rid_proto.set_prev_edge_is_set(false);
+    }
+
+    return rid_proto;
+}
+
+router_serialize::OptionalRID SerializationMachine::SerializeOptionalRID(
+    const std::optional<graph::Router<double>::RouteInternalData>&
+    optional_rid)
+{
+    router_serialize::OptionalRID optional_rid_proto;
+
+    if (optional_rid.has_value())
+    {
+        *optional_rid_proto.mutable_rid() = SerializeRID(*optional_rid);
+        optional_rid_proto.set_rid_is_set(true);
+    }
+    else
+    {
+        optional_rid_proto.set_rid_is_set(false);
+    }
+
+    return optional_rid_proto;
+}
+
+router_serialize::RepeatedRID SerializationMachine::SerializeRepeatedRID(
+    const std::vector<std::optional<graph::Router<double>::RouteInternalData>>&
+    repeated_rid)
+{
+    router_serialize::RepeatedRID repeated_rid_proto;
+
+    for (const auto& optional_rid : repeated_rid)
+    {
+        *repeated_rid_proto.add_optional_rid() =
+            SerializeOptionalRID(optional_rid);
+    }
+
+    return repeated_rid_proto;
+}
+
+void SerializationMachine::SerializeRouter(const graph::Router<double>& router)
+{
+    router_serialize::RepeatedRIDs repeated_rids_proto;    
+    const graph::Router<double>::RoutesInternalData& repeated_rids =
+        router.GetRIDs();
+    
+    for (const auto& repeated_rid : repeated_rids)
+    {
+        *repeated_rids_proto.add_rids() =
+            SerializeRepeatedRID(repeated_rid);
+    }
+
+    *tcb_.mutable_router_rid() = repeated_rids_proto;
+}
+
 void SerializationMachine::DeserializeStopsToDistanceElement(
     const transport_catalogue_serialize::StopsToDistance& stops_to_distance)
 {
@@ -288,6 +411,109 @@ void SerializationMachine::DeserializeRouterSettings(
 
     router_settings.bus_wait_time = rs_proto.bus_wait_time();
     router_settings.bus_velocity = rs_proto.bus_velocity();
+}
+
+graph::Edge<double> SerializationMachine::DeserializeEdge(
+    const graph_serialize::Edge edge_proto)
+{
+    graph::Edge<double> edge;
+
+    edge.from = edge_proto.from();
+    edge.to = edge_proto.to();
+    edge.weight = edge_proto.weight();
+    edge.bus_name = edge_proto.bus_name();
+    edge.span_count = edge_proto.span_count();
+
+    return edge;
+}
+
+graph::DirectedWeightedGraph<double>::IncidenceList
+SerializationMachine::DeserializeIncedenceList(
+    const graph_serialize::IncidenceList incedence_list_proto)
+{
+    graph::DirectedWeightedGraph<double>::IncidenceList incedence_list;
+
+    for (const auto& edge_id : incedence_list_proto.edge_id())
+    {
+        incedence_list.push_back(edge_id);
+    }
+
+    return incedence_list;
+}
+
+void SerializationMachine::DeserializeGraph(
+    graph::DirectedWeightedGraph<double>& graph)
+{
+    std::vector<graph::Edge<double>> edges;
+    for (const auto& edge : tcb_.mutable_graph()->edges())
+    {
+        edges.push_back(DeserializeEdge(edge));
+    }
+    graph.SetEdges(edges);
+
+    std::vector<graph::DirectedWeightedGraph<double>::IncidenceList> incedence_lists;
+    for (const auto& incedence_list : tcb_.mutable_graph()->incidence_list())
+    {
+        incedence_lists.push_back(DeserializeIncedenceList(incedence_list));
+    }
+    graph.SetIncidenceLists(incedence_lists);
+}
+
+graph::Router<double>::RouteInternalData
+SerializationMachine::DeserializeRID(const router_serialize::RID& rid_proto)
+{
+    graph::Router<double>::RouteInternalData rid;
+    rid.weight = rid_proto.weight();
+    if (rid_proto.prev_edge_is_set())
+    {
+        rid.prev_edge = rid_proto.prev_edge();
+        return rid;
+    }
+
+    rid.prev_edge = std::nullopt;
+    return rid;
+}
+
+std::optional<graph::Router<double>::RouteInternalData>
+SerializationMachine::DeserializeOptionalRID(
+    const router_serialize::OptionalRID& optional_rid_proto)
+{
+    std::optional<graph::Router<double>::RouteInternalData> optional_rid;
+    if (optional_rid_proto.rid_is_set())
+    {
+        optional_rid = DeserializeRID(optional_rid_proto.rid());
+
+        return optional_rid;
+    }
+
+    optional_rid = std::nullopt;
+    return optional_rid;
+}
+
+std::vector<std::optional<graph::Router<double>::RouteInternalData>>
+SerializationMachine::DeserializeRepeatedRID(
+    const router_serialize::RepeatedRID& repeated_rid_proto)
+{
+    std::vector<std::optional<graph::Router<double>::RouteInternalData>> repeated_rid;
+    for (const auto& optional_rid : repeated_rid_proto.optional_rid())
+    {
+        repeated_rid.push_back(DeserializeOptionalRID(optional_rid));
+    }
+
+    return repeated_rid;
+}
+
+void SerializationMachine::DeserializeRouter(graph::Router<double>& router,
+    const graph::DirectedWeightedGraph<double>& graph)
+{
+    graph::Router<double>::RoutesInternalData routes_internal_data;
+    for (const auto& rid : tcb_.mutable_router_rid()->rids())
+    {
+        routes_internal_data.push_back(DeserializeRepeatedRID(rid));
+    }
+
+    router.SetRIDs(routes_internal_data);
+    router.SetGraph(graph);
 }
 
 }
